@@ -5,6 +5,7 @@ export default defineConfig({
   title: "Eamon's docs",
   description: "A VitePress Site",
   srcDir: "./docs",
+  base: "/Eamon-s-docs/", // 设置base路径以适配GitHub Pages
   themeConfig: {
     // https://vitepress.dev/reference/default-theme-config
     nav: [
