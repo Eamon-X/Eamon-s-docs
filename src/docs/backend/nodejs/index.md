@@ -255,9 +255,19 @@ server.listen(8080, "localhost", () => {
 // 2. 服务器接收请求并处理
 server.on("request", (req, res) => {
   // 3. 响应处理结果并断开链接
-  res.statusCode = 200;
-  res.setHeader("Content-Type", "text/plain");
-  res.end("Hello, World!\n");
+  if (req.url === "/") {
+    res.statusCode = 200;
+    res.setHeader("Content-Type", "text/plain; charset=utf-8"); // 服务器数据响应类型：text/plain 文本类型；charset=utf-8 编码类型
+    res.end("Hello, World!\n");
+  } else if (req.url === "/html") {
+    res.statusCode = 200;
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    res.end("<h1>Hello, World!</h1>\n");
+  } else {
+    res.statusCode = 404;
+    res.setHeader("Content-Type", "text/plain; charset=utf-8");
+    res.end("404 Not Found\n");
+  }
 });
 ```
 
@@ -274,3 +284,16 @@ npm install -g nodemon
 ```bash
 nodemon server.js
 ```
+## 服务器数据响应类型
+- text/plain 文本类型（需要指定编码类型）
+- text/html HTML 类型（需要指定编码类型）
+- application/json JSON 类型（需要指定编码类型）
+- application/javascript JavaScript 类型（需要指定编码类型）
+- image/png PNG 图片类型（二进制类型是按字节传输的，不需要字符编码信息）
+- image/jpeg JPEG 图片类型（二进制类型是按字节传输的，不需要字符编码信息）
+- audio/mpeg MP3 音频类型（二进制类型是按字节传输的，不需要字符编码信息）
+- video/mp4 MP4 视频类型（二进制类型是按字节传输的，不需要字符编码信息）
+
+## 编码类型
+- charset=utf-8 万国码
+- charset=gbk 国标码
