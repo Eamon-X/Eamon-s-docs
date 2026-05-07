@@ -25,6 +25,142 @@ npm install express
 npx express-generator myapp
 ```
 
+## 路由
+
+### 路由方法
+
+| 路由方法 | 描述 |
+| --- | --- |
+| `app.all()` | 处理所有 HTTP 请求 |
+| `app.get()` | 处理 GET 请求 |
+| `app.post()` | 处理 POST 请求 |
+| `app.put()` | 处理 PUT 请求 |
+| `app.delete()` | 处理 DELETE 请求 |
+
+### 路径参数
+
+Express 使用 `path-to-regexp` 库来解析路由路径，支持多种参数格式：
+
+#### 基础路径参数
+
+使用 `:param` 格式定义路径参数，参数值通过 `req.params` 访问：
+
+```js
+// 定义路由：匹配 /user/123
+app.get("/user/:id", (req, res) => {
+  res.send(`User ID: ${req.params.id}`);
+});
+
+// 多个路径参数：匹配 /posts/2024/05
+app.get("/posts/:year/:month", (req, res) => {
+  res.send(`Year: ${req.params.year}, Month: ${req.params.month}`);
+});
+```
+
+#### 可选参数（?）
+
+参数名后加 `?` 表示该参数可选：
+
+```js
+// 匹配 /user/123 和 /user
+app.get("/user/:id?", (req, res) => {
+  res.send(`User ID: ${req.params.id || '未指定'}`);
+});
+
+// 多个可选参数：匹配 /posts、/posts/2024、/posts/2024/05
+app.get("/posts/:year?/:month?", (req, res) => {
+  res.send(`Year: ${req.params.year}, Month: ${req.params.month}`);
+});
+```
+
+#### 匹配多个路径段（+）
+
+参数名后加 `+` 表示匹配一个或多个路径段：
+
+```js
+// 匹配 /files/documents/report.pdf
+app.get("/files/:path+", (req, res) => {
+  res.send(`Path: ${req.params.path}`); // 输出: documents/report.pdf
+});
+```
+
+#### 匹配零或多个路径段（*）
+
+参数名后加 `*` 表示匹配零个或多个路径段：
+
+```js
+// 匹配 /static/css/style.css 和 /static
+app.get("/static/*", (req, res) => {
+  res.send(`Static path: ${req.params[0]}`);
+});
+```
+
+#### 正则表达式约束
+
+可以使用正则表达式约束参数格式：
+
+```js
+// 仅匹配数字 ID：/user/123
+app.get("/user/:id(\\d+)", (req, res) => {
+  res.send(`Numeric ID: ${req.params.id}`);
+});
+
+// 匹配特定格式的日期：/date/2024-05-20
+app.get("/date/:date(\\d{4}-\\d{2}-\\d{2})", (req, res) => {
+  res.send(`Date: ${req.params.date}`);
+});
+```
+
+#### 参数默认值
+
+可以在处理函数中为参数设置默认值：
+
+```js
+app.get("/posts/:page?", (req, res) => {
+  const page = parseInt(req.params.page) || 1;
+  res.send(`当前页码: ${page}`);
+});
+```
+
+
+
+
+
+## 响应方法
+
+| 响应方法 | 描述 |
+| --- | --- |
+| `res.send()` | 发送文本响应 |
+| `res.json()` | 发送 JSON 响应 |
+| `res.download()` | 发送下载响应 |
+| `res.redirect()` | 发送重定向响应 |
+| `res.render()` | 发送渲染响应 |
+| `res.sendStatus()` | 设置状态码并立即发送响应（包含状态码对应文本） |
+| `res.status()` | 设置响应状态码（可链式调用其他方法） |
+| `res.setHeader()` | 设置响应头 |
+| `res.end()` | 结束响应 |
+
+### res.sendStatus() vs res.status()
+
+两者都用于设置HTTP响应状态码，但用法和行为有重要区别：
+
+| 特性 | `res.sendStatus(code)` | `res.status(code)` |
+|------|----------------------|-------------------|
+| **作用** | 设置状态码并立即发送响应 | 仅设置状态码，不发送响应 |
+| **响应体** | 自动发送状态码对应的文本（如 404 → "Not Found"） | 无响应体，需后续调用 `send()`/`json()` |
+| **返回值** | 无（响应已发送） | 返回 `res` 对象，支持链式调用 |
+
+```js
+// res.sendStatus() - 一步完成
+res.sendStatus(404);  // 等价于 res.status(404).send('Not Found')
+res.sendStatus(200);  // 等价于 res.status(200).send('OK')
+
+// res.status() - 可链式调用
+res.status(400).send('请求参数错误');
+res.status(201).json({ id: 1, message: '创建成功' });
+res.status(500).end();  // 仅发送状态码，无响应体
+```
+
 ## 基本使用
 
 ```js
@@ -284,3 +420,4 @@ npm install cors
 const cors = require('cors');
 app.use(cors());
 ```
+
