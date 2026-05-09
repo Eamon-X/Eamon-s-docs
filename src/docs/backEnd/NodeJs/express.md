@@ -303,7 +303,7 @@ Express 中间件主要分为以下五类：
 | 路由级中间件 | 仅对特定路由生效 | `router.use()` 或路由参数中添加 |
 | 错误处理中间件 | 捕获和处理错误 | 四个参数 `(err, req, res, next)` |
 | 内置中间件 | Express 内置功能 | `express.static()`、`express.json()` 等 |
-| 第三方中间件 | npm 安装的中间件 | 如 `body-parser`、`cors` 等 |
+| 第三方中间件 | npm 安装的中间件 | 如 `body-parser`、`cors`、`express-validator` 等 |
 
 ### 应用级中间件
 

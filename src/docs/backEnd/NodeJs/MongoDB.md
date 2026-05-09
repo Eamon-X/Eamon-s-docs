@@ -224,12 +224,133 @@ async function testConnectDB(dbName) {
 testConnectDB("my_test");
 ```
 
-<!--
+### 使用 Mongoose 模块
 
-```javascript
-const mongoose = require('mongoose');
-mongoose.connect('mongodb://localhost:27017/mydb', {
-    useNewUrlParser: true,
-    useUnifiedTopology: true
-});
-``` -->
+Mongoose 是 MongoDB 的 ODM（对象文档映射）工具，提供了更优雅的数据模型管理方式。
+
+#### 安装 Mongoose
+
+```bash
+npm install mongoose
+```
+
+#### 完整示例
+
+```js
+// 引入 mongoose
+const mongoose = require("mongoose");
+
+// 连接数据库（MongoDB 6.0+ 无需额外配置参数）
+async function testConnectDB() {
+  try {
+    // 连接 MongoDB
+    await mongoose.connect("mongodb://localhost:27017/my_test");
+    console.log("✅ MongoDB 连接成功！");
+
+    // 1. 定义数据模型（Schema）
+    const userSchema = new mongoose.Schema({
+      name: {
+        type: String,
+        required: true,  // 必填字段
+        trim: true       // 自动去除首尾空格
+      },
+      age: {
+        type: Number,
+        min: 0,          // 最小值约束
+        max: 120         // 最大值约束
+      },
+      createdAt: {
+        type: Date,
+        default: Date.now  // 默认值为当前时间
+      }
+    });
+
+    // 2. 创建模型（Model）
+    // - 第一个参数：模型名称（首字母大写，遵循类命名约定）
+    // - 第二个参数：对应的 Schema
+    // - Mongoose 会自动将模型名转换为小写复数形式作为集合名
+    //   例如：User → users，Product → products
+    const User = mongoose.model("User", userSchema);
+    
+    // 💡 为什么 User 要用大写？
+    // - mongoose.model() 返回的是一个 JavaScript 类（构造函数）
+    // - JavaScript 约定：类和构造函数使用 PascalCase（首字母大写）
+    // - 后续使用 new User() 创建实例时，大写开头符合直觉
+    // - 这与变量/函数使用 camelCase（小驼峰）的规范不冲突
+    // - 与"推荐全小写"不冲突，因为这是类名，不是普通变量名
+
+    // 3. 插入数据
+    const newUser = new User({ name: "小明", age: 20 });
+    await newUser.save();
+    console.log("✅ 数据插入成功");
+
+    // 4. 查询数据
+    const users = await User.find();
+    console.log("📄 查询到的数据：", users);
+
+  } catch (err) {
+    console.error("❌ 操作失败：", err);
+  } finally {
+    // 关闭连接
+    await mongoose.disconnect();
+    console.log("✅ MongoDB 连接已关闭");
+  }
+}
+
+// 执行
+testConnectDB();
+```
+
+#### Mongoose 常用操作示例
+
+```js
+// 查询单条数据
+// 1. 按 ID 查询
+const user = await User.findById(userId);
+// 2. 按字段值查询
+const user = await User.findOne({ name: "小明" });
+
+// 条件查询
+// 1. 等于查询
+const user = await User.findOne({ name: "小明" });
+// 2. 大于等于查询
+const adults = await User.find({ age: { $gte: 18 } });
+// 3. 小于等于查询
+const children = await User.find({ age: { $lte: 18 } });
+// 4. 大于查询
+const older = await User.find({ age: { $gt: 18 } });
+// 5. 小于查询
+const younger = await User.find({ age: { $lt: 18 } });
+// 6. 不等于查询
+const notEqual = await User.find({ name: { $ne: "小明" } });
+// 7. 存查询
+const hasName = await User.findOne({ name: { $exists: true } });
+// 8. 存查询
+const hasAge = await User.find({ age: { $gte: 18 } });
+
+// 更新数据
+// 1. 按 ID 更新
+await User.findByIdAndUpdate(userId, { age: 21 });
+// 2. 按字段值更新
+await User.findOneAndUpdate({ name: "小明" }, { age: 21 });
+
+// 删除数据
+// 1. 按 ID 删除
+await User.findByIdAndDelete(userId);
+// 2. 按字段值删除
+await User.findOneAndDelete({ name: "小明" });
+
+// 计数
+const count = await User.countDocuments({ age: { $gte: 18 } });
+```
+
+#### 与原生 MongoDB 驱动对比
+
+| 特性 | 原生驱动 | Mongoose |
+|------|----------|----------|
+| **数据验证** | 需手动实现 | 内置 Schema 验证 |
+| **类型安全** | 无 | 支持 TypeScript |
+| **查询语法** | 简洁 | 更直观的链式调用 |
+| **数据模型** | 无概念 | 提供 Model/Schema |
+| **学习曲线** | 低 | 稍高 |
+| **适用场景** | 简单操作、性能敏感 | 复杂业务、团队协作 |
