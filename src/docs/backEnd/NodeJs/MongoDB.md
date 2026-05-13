@@ -251,18 +251,18 @@ async function testConnectDB() {
     const userSchema = new mongoose.Schema({
       name: {
         type: String,
-        required: true,  // 必填字段
-        trim: true       // 自动去除首尾空格
+        required: true, // 必填字段
+        trim: true, // 自动去除首尾空格
       },
       age: {
         type: Number,
-        min: 0,          // 最小值约束
-        max: 120         // 最大值约束
+        min: 0, // 最小值约束
+        max: 120, // 最大值约束
       },
       createdAt: {
         type: Date,
-        default: Date.now  // 默认值为当前时间
-      }
+        default: Date.now, // 默认值为当前时间
+      },
     });
 
     // 2. 创建模型（Model）
@@ -271,7 +271,7 @@ async function testConnectDB() {
     // - Mongoose 会自动将模型名转换为小写复数形式作为集合名
     //   例如：User → users，Product → products
     const User = mongoose.model("User", userSchema);
-    
+
     // 💡 为什么 User 要用大写？
     // - mongoose.model() 返回的是一个 JavaScript 类（构造函数）
     // - JavaScript 约定：类和构造函数使用 PascalCase（首字母大写）
@@ -287,7 +287,6 @@ async function testConnectDB() {
     // 4. 查询数据
     const users = await User.find();
     console.log("📄 查询到的数据：", users);
-
   } catch (err) {
     console.error("❌ 操作失败：", err);
   } finally {
@@ -346,11 +345,11 @@ const count = await User.countDocuments({ age: { $gte: 18 } });
 
 #### 与原生 MongoDB 驱动对比
 
-| 特性 | 原生驱动 | Mongoose |
-|------|----------|----------|
-| **数据验证** | 需手动实现 | 内置 Schema 验证 |
-| **类型安全** | 无 | 支持 TypeScript |
-| **查询语法** | 简洁 | 更直观的链式调用 |
-| **数据模型** | 无概念 | 提供 Model/Schema |
-| **学习曲线** | 低 | 稍高 |
+| 特性         | 原生驱动           | Mongoose           |
+| ------------ | ------------------ | ------------------ |
+| **数据验证** | 需手动实现         | 内置 Schema 验证   |
+| **类型安全** | 无                 | 支持 TypeScript    |
+| **查询语法** | 简洁               | 更直观的链式调用   |
+| **数据模型** | 无概念             | 提供 Model/Schema  |
+| **学习曲线** | 低                 | 稍高               |
 | **适用场景** | 简单操作、性能敏感 | 复杂业务、团队协作 |
