@@ -11,6 +11,7 @@ export default defineConfig({
     nav: [
       { text: "前端", link: "/" },
       { text: "后端", items: [{ text: "Node.js", link: "backEnd/NodeJs" }] },
+      { text: "AI", items: [{ text: "龙虾研习室", link: "AI/ClawLab/index" }] },
     ],
 
     // sidebar: [
@@ -25,6 +26,7 @@ export default defineConfig({
     sidebar: {
       // 路由
       "/backEnd/NodeJs": genSidebar("/backEnd/NodeJs"),
+      "/AI/ClawLab/tutorial": genSidebar("/AI/ClawLab/tutorial"),
     },
 
 
