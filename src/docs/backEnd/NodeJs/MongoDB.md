@@ -341,6 +341,42 @@ await User.findOneAndDelete({ name: "小明" });
 
 // 计数
 const count = await User.countDocuments({ age: { $gte: 18 } });
+
+// 分页查询
+// skip(0): 跳过前0条记录（从第1条开始）
+// limit(10): 每页显示10条记录
+const users = await User.find().skip(0).limit(10);
+// countDocuments(): 获取集合中的总记录数，用于计算总页数
+const total = await User.countDocuments();
+
+// 关联查询
+// populate("friends"): 自动填充关联的 friends 字段，将外键引用替换为完整的文档数据
+// populate 是 Mongoose 提供的强大功能，用于处理文档之间的关联关系
+// 当一个文档中存储了其他文档的 ID（外键）时，populate 可以自动查询并填充这些关联文档的完整内容
+// 支持链式调用：populate("friends").populate("posts") 可以填充多个关联字段
+// 支持字段选择：populate("friends", "name age") 只填充关联文档的指定字段
+const users = await User.find().populate("friends");
+
+// 返回示例：
+// [
+//   {
+//     _id: "user123",
+//     name: "张三",
+//     friends: [
+//       {
+//         _id: "friend456",
+//         name: "李四",
+//         age: 25
+//       },
+//       {
+//         _id: "friend789",
+//         name: "王五",
+//         age: 28
+//       }
+//     ]
+//   }
+// ]
+// 不使用 populate 时，friends 字段只会返回 ID 数组：["friend456", "friend789"]
 ```
 
 #### 与原生 MongoDB 驱动对比

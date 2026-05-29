@@ -473,20 +473,24 @@ const generateToken = (user) => {
 };
 
 // JWT 认证中间件
-const authenticate = (req, res, next) => {
-  const token = req.headers.authorization?.split(" ")[1];
+const authenticate = (required = true) => {
+  return (req, res, next) => {
+    const token = req.headers.authorization?.split(" ")[1];
 
-  if (!token) {
-    return res.status(401).json({ message: "未授权" });
-  }
-
-  jwt.verify(token, "your-secret-key", (err, decoded) => {
-    if (err) {
-      return res.status(403).json({ message: "无效的 token" });
+    if (token) {
+      jwt.verify(token, "your-secret-key", (err, decoded) => {
+        if (err) {
+          return res.status(403).json({ message: "无效的 token" });
+        }
+        req.user = decoded;
+        next();
+      });
+    } else if (required) {
+      return res.status(401).json({ message: "未授权" });
+    } else {
+      return next();
     }
-    req.user = decoded;
-    next();
-  });
+  };
 };
 
 // 登录接口
@@ -501,7 +505,7 @@ app.post("/api/login", (req, res) => {
 });
 
 // 保护的路由
-app.get("/api/profile", authenticate, (req, res) => {
+app.get("/api/profile", authenticate(), (req, res) => {
   res.json({ user: req.user });
 });
 ```
