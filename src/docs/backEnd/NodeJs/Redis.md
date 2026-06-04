@@ -62,6 +62,16 @@ flushdb
 # 清空所有数据库
 # 注意：此操作会删除所有键值对，操作后数据库将为空
 flushall
+
+# 查看Redis配置
+# 可以查看所有配置项，也可以查看指定配置项
+# 例如：查看密码配置项
+# CONFIG GET requirepass
+CONFIG GET requirepass
+
+# 设置密码
+# 例如：设置密码为"123456"
+CONFIG SET requirepass 123456
 ```
 
 ## 数据类型
@@ -436,5 +446,80 @@ LREM messages 1 "第二条消息"   # 删除第一个匹配的元素
 | **队列（FIFO）** | LPUSH | RPOP | 先进先出 |
 | **栈（LIFO）** | LPUSH | LPOP | 后进先出 |
 
+## 使用node.js连接Redis
+
+### ioredis
+
+ioredis是一个基于Promise的Redis客户端，提供了更方便的API和更好的性能。
+
+#### 安装
+
+```bash
+npm install ioredis
+npm install @types/ioredis
+```
+
+#### 连接Redis
+
+```javascript
+const Redis = require('ioredis');
+
+// 连接Redis
+// 注意：如果Redis没有设置密码，可以省略password参数
+const client = new Redis({
+  host: 'localhost',
+  port: 6379,
+  password: '123456',
+});
+
+// 监听连接事件
+// 当连接成功时触发
+client.on('connect', () => {
+  console.log('Connected to Redis');
+});
+
+// 监听就绪事件
+// 当客户端准备就绪时触发
+client.on('ready', () => {
+  console.log('Redis client ready to use');
+});
+
+// 监听错误事件
+// 当连接错误时触发
+client.on('error', (err) => {
+  console.error('Redis connection error:', err);
+});
+
+// 监听结束事件
+// 当连接关闭时触发
+client.on('end', () => {
+  console.log('Redis connection closed');
+});
+
+// 设置键值对
+client.set('key', 'value').then(() => {
+  console.log('Key set successfully');
+});
+
+// 获取键值对
+// 注意：如果键不存在，返回null
+client.get('key').then((value) => {
+  console.log('Value:', value);
+});
+
+// 获取所有键
+// 注意：返回所有键，包括系统键（如 __keyspace__）
+client.keys('*').then((keys) => {
+  console.log('Keys:', keys);
+});
+
+// 关闭连接
+// 注意：关闭连接后，所有操作将无法执行，建议在应用结束时调用
+client.quit();
+```
+
 ## 注意事项
 1. 不同应用的数据应该储存在不同的Redis实例中，如应用A的数据储存在端口6379的Redis实例，应用B的数据储存在端口6380的Redis实例。
+
+## 参考文档
+- [Redis中文](https://redis.com.cn/)
