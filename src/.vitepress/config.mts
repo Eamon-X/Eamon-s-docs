@@ -10,7 +10,7 @@ export default defineConfig({
     // https://vitepress.dev/reference/default-theme-config
     nav: [
       { text: "前端", link: "/" },
-      { text: "后端", items: [{ text: "Node.js", link: "backEnd/NodeJs" }] },
+      { text: "后端", items: [{ text: "Node.js", link: "backEnd/NodeJs" }, { text: "Golang", link: "backEnd/Golang" }] },
       { text: "AI", items: [{ text: "龙虾研习室", link: "AI/ClawLab/index" }] },
     ],
 
@@ -26,6 +26,7 @@ export default defineConfig({
     sidebar: {
       // 路由
       "/backEnd/NodeJs": genSidebar("/backEnd/NodeJs"),
+      "/backEnd/Golang": genSidebar("/backEnd/Golang"),
       "/AI/ClawLab/tutorial": genSidebar("/AI/ClawLab/tutorial"),
     },
 
