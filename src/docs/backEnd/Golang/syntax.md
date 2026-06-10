@@ -1,0 +1,1058 @@
+---
+title: Go 语法基础
+order: 1
+---
+
+# Go 语法基础
+
+## 包与入口函数
+
+每个 Go 源文件都必须在第一行（注释和空行之后）声明它所属的包。
+
+### 包的类型
+
+Go 中的包主要分为两种类型：
+
+**1. main 包（可执行程序）**
+
+`main` 包是 Go 程序的入口包，编译后会生成可执行文件。每个可执行程序必须有且仅有一个 `main` 包。
+
+```go
+package main
+
+import "fmt"
+
+func main() {
+    fmt.Println("Hello, World!")
+}
+```
+
+**2. 普通包（库包）**
+
+普通包用于组织可复用的代码，编译后生成 `.a` 归档文件，供其他包导入使用。包名通常与目录名一致。
+
+```go
+// 位于 mylib/math.go 文件中
+package mylib
+
+// Add 导出函数，供其他包使用
+func Add(a, b int) int {
+    return a + b
+}
+
+// helper 未导出函数，仅包内可见
+func helper() {
+    // 内部逻辑
+}
+```
+
+### 入口函数
+
+`main` 包中必须定义一个 `main` 函数，它是程序的执行入口。
+
+```go
+package main
+
+import "fmt"
+
+// main 函数是程序的入口点
+// 无参数，无返回值
+func main() {
+    fmt.Println("程序开始执行")
+
+    // 程序逻辑
+    // main 函数执行完毕后，程序自动退出
+}
+```
+
+**入口函数的特点：**
+
+- `main` 函数不能有参数
+- `main` 函数不能有返回值
+- 每个 `main` 包只能有一个 `main` 函数
+- `main` 函数执行完毕后，程序自动终止
+- 可以通过 `os.Exit(code)` 手动设置退出状态码
+
+```go
+package main
+
+import (
+    "fmt"
+    "os"
+)
+
+func main() {
+    err := run()
+    if err != nil {
+        fmt.Println("程序出错:", err)
+        os.Exit(1)  // 以状态码 1 退出，表示异常
+    }
+    os.Exit(0)  // 以状态码 0 退出，表示正常
+}
+
+func run() error {
+    // 实际业务逻辑
+    return nil
+}
+```
+
+### init 函数
+
+每个包可以包含一个或多个 `init` 函数，它们在包初始化时自动执行，无需手动调用。
+
+```go
+package main
+
+import "fmt"
+
+// init 函数在 main 函数之前自动执行
+// 常用于初始化配置、注册组件等
+func init() {
+    fmt.Println("包初始化")
+}
+
+// 可以有多个 init 函数，按声明顺序执行
+func init() {
+    fmt.Println("第二个 init")
+}
+
+func main() {
+    fmt.Println("main 函数执行")
+}
+
+// 输出顺序：
+// 包初始化
+// 第二个 init
+// main 函数执行
+```
+
+**init 函数的特点：**
+
+- 无参数，无返回值
+- 不能被显式调用
+- 在每个包导入时自动执行一次
+- 多个 `init` 函数按文件名的字典序执行
+- 常用于全局变量初始化、数据库连接、注册驱动等场景
+
+## 常用标准库
+
+### fmt 包
+
+fmt包提供了格式化输入和输出的功能。
+
+[fmt 包文档](https://docscn.studygolang.com/The-Golang-Standard-Library-by-Example/chapter01/01.3.html)
+
+```go
+import "fmt"
+
+// 输出
+fmt.Print("Hello", "World")                    // 不换行，多个参数不分隔
+fmt.Println("Hello", "World")                  // 换行，多个参数用空格分隔
+// 格式化输出：
+// %s 表示字符串，%d 表示整数，%f 表示浮点数，%v 表示任意类型
+// \n 表示换行，\t 表示制表符
+fmt.Printf("Hello, %s!\n", "张三")
+fmt.Printf("Hello, %d!\n", 25)
+fmt.Printf("Hello, %f!\n", 3.14)
+fmt.Printf("Hello, %v!\n", true)
+fmt.Printf("Name: %s, Age: %d\n", "张三", 25)  // 默认不换行，用\n换行
+// 输出变量类型
+fmt.Printf("%T\n", name)  // 输出 name 的类型，例如 string
+fmt.Printf("%T\n", age)   // 输出 age 的类型，例如 int
+
+// 格式化字符串
+str := fmt.Sprintf("Name: %s, Age: %d", "张三", 25)
+
+// 格式化输入
+var name string
+var age int
+fmt.Scan(&name, &age)
+fmt.Scanf("Name: %s, Age: %d", &name, &age)
+```
+
+### strings 包
+
+```go
+import "strings"
+
+// 常用字符串操作
+strings.Contains("hello world", "world")     // true
+strings.HasPrefix("hello", "he")             // true
+strings.HasSuffix("hello", "lo")             // true
+strings.Index("hello", "ll")                 // 2
+strings.Join([]string{"a", "b", "c"}, "-")   // "a-b-c"
+strings.Split("a-b-c", "-")                  // ["a", "b", "c"]
+strings.ToLower("HELLO")                     // "hello"
+strings.ToUpper("hello")                     // "HELLO"
+strings.TrimSpace("  hello  ")               // "hello"
+strings.Replace("hello", "l", "L", -1)       // "heLLo"
+strings.Count("hello", "l")                  // 2
+```
+
+### os 包
+
+```go
+import "os"
+
+// 环境变量
+os.Getenv("GOPATH")
+os.Setenv("MY_VAR", "value")
+
+// 文件和目录
+os.Getwd()                          // 获取当前工作目录
+os.Chdir("/path/to/dir")            // 切换目录
+os.Mkdir("newdir", 0755)            // 创建目录
+os.MkdirAll("a/b/c", 0755)          // 递归创建目录
+os.Remove("file.txt")               // 删除文件
+os.RemoveAll("dir")                 // 递归删除
+
+// 文件操作
+file, err := os.Create("test.txt")
+file, err := os.Open("test.txt")
+file, err := os.OpenFile("test.txt", os.O_APPEND|os.O_WRONLY, 0644)
+```
+
+## 变量与常量
+
+变量规则：
+
+- 声明时未赋值，打印时会显示空
+- 声明后才能使用且必须使用
+- 同一作用域内，变量名不能重复
+- 短变量声明：只能在函数内使用（局部变量），不能在包内使用（全局变量）
+
+变量名的命名规则：
+
+- 只能包含字母、数字和下划线
+- 不能以数字开头
+- 不能使用 Go 语言保留字
+- 建议使用驼峰程命名法
+
+### 变量声明
+
+```go
+// 方式1：使用 var 关键字 `var 变量名 类型 = 表达式`
+var name string = "张三"
+var age int = 25
+
+// 方式2：类型推断
+var name = "张三"  // 自动推断为 string 类型
+var age = 25       // 自动推断为 int 类型
+
+// 方式3：简短声明（只能在函数内使用） `变量名 := 表达式`
+name := "张三"
+age := 25
+
+// 多变量声明
+var x, y, z int = 1, 2, 3 // `var 变量名1, 变量名2, ... 类型 = 表达式1, 表达式2, ...`
+a, b, c := 10, 20, "30"
+
+/*
+- 可以同时声明多个变量，每个变量的类型可以不同
+- 可以在声明时初始化变量，也可以在声明后赋值
+*/
+var (
+    a int = 10
+    b string = "hello"
+)
+```
+
+### 匿名变量
+
+在使用多重赋值时，如果想要忽略某个值，可以使用匿名变量，用下划线 \_ 表示。
+匿名变量不占用命名空间，不会分配内存，所以匿名变量之间不存在重复声明。
+
+```go
+var username, age = getUserInfo()
+var _, age = getUserInfo() // 单独获取年龄
+```
+
+### 常量声明
+
+```go
+// 使用 const 关键字
+const PI = 3.14159
+const MAX_SIZE = 100
+
+// 批量声明常量，如果省略了值则表示和上面一行的值相同
+const (
+    StatusOK    = 200
+    StatusError = 500
+    StatusError2 // 500
+)
+
+// iota 常量生成器，用于生成连续的整数常量，从 0 开始
+// 每次 const 出现时，iota 会重置为 0
+// 使用 _ 可以跳过当前的 iota 值，继续生成下一个 iota 值
+// 可以在声明中间插队
+const a = iota    // 0
+const (
+    a0 = iota    // 0
+    a1           // 1
+    a2          // 2
+    _                // 3
+    a10 = 10        // 10
+    a5 = iota       // 5
+    a6         // 6
+)
+
+// iota 的多常量同行定义用法
+const (
+    a, b = iota + 1, iota + 2    // 1, 2
+    c, d // 2, 3
+    e, f // 3, 4
+)
+```
+**核心规则：**
+
+1. **`iota` 按行递增**：每一行开始时 `iota` 自增 1（从 0 开始）
+2. **同一行的 `iota` 值相同**：同一行中多次出现的 `iota` 取同一个值
+3. **省略表达式会继承上一行**：后续行省略赋值表达式时，自动复用上一行的表达式模式
+
+**逐行解析：**
+
+| 行 | iota 值 | 计算过程 | 结果 |
+|---|---------|---------|------|
+| 第 1 行 | 0 | `a = 0+1`, `b = 0+2` | `a=1, b=2` |
+| 第 2 行 | 1 | `c = 1+1`, `d = 1+2`（继承表达式） | `c=2, d=3` |
+| 第 3 行 | 2 | `e = 2+1`, `f = 2+2`（继承表达式） | `e=3, f=4` |
+
+## 数据类型
+
+数据类型分为基本数据类型和复合数据类型。
+
+### 基本数据类型
+
+基本数据类型包括：
+
+- 整数类型：int8, int16, int32, int64, uint8, uint16, uint32, uint64
+- 浮点数类型：float32, float64
+- 复数类型：complex64, complex128
+- 字符串类型：string
+- 布尔类型：bool
+
+#### 数值类型
+
+```go
+// 整数类型
+var a int8 = 127        // -128 到 127
+var b int16 = 32767     // -32768 到 32767
+var c int32 = 2147483647
+var d int64 = 9223372036854775807
+var e int = 100         // 根据平台自动选择 32 或 64 位
+
+var f uint8 = 255       // 0 到 255
+var g uint = 100        // 无符号整数
+
+// 浮点数类型
+var h float32 = 3.14
+var i float64 = 3.141592653589793
+
+// 复数类型
+var j complex64 = 1 + 2i
+var k complex128 = 1 + 2i
+```
+
+#### 字符串和布尔类型
+
+```go
+// 字符串
+var name string = "Hello, World!"
+var message = "这是一段中文文本"
+
+// 字符串操作
+str1 := "Hello"
+str2 := "World"
+result := str1 + " " + str2  // 字符串拼接
+length := len(str1)           // 获取字符串长度
+
+// 布尔类型
+var isActive bool = true
+var isDeleted bool = false
+```
+
+#### 类型转换
+
+```go
+// 显式类型转换
+var a int = 10
+var b float64 = float64(a)
+var c int = int(b)
+
+// 高位向低位转换时要注意溢出问题
+var n1 int16 = 130
+fmt.Println(int8(n1)) // 输出：-126
+
+// 注意：Go 不支持隐式类型转换
+// var d float64 = a  // 错误！必须显式转换
+```
+
+## 控制结构
+
+### 条件语句
+
+```go
+// if 语句
+age := 18
+if age >= 18 {
+    fmt.Println("成年人")
+}
+
+// if-else 语句
+if age >= 18 {
+    fmt.Println("成年人")
+} else {
+    fmt.Println("未成年人")
+}
+
+// if-else if-else 语句
+score := 85
+if score >= 90 {
+    fmt.Println("优秀")
+} else if score >= 80 {
+    fmt.Println("良好")
+} else if score >= 60 {
+    fmt.Println("及格")
+} else {
+    fmt.Println("不及格")
+}
+
+// if 带初始化语句
+if age := 20; age >= 18 {
+    fmt.Println("成年人")
+}
+// age 在这里不可用
+```
+
+### switch 语句
+
+```go
+// 基本 switch
+day := "Monday"
+switch day {
+case "Monday":
+    fmt.Println("星期一")
+case "Tuesday":
+    fmt.Println("星期二")
+case "Wednesday":
+    fmt.Println("星期三")
+default:
+    fmt.Println("其他")
+}
+
+// 不带表达式的 switch（类似 if-else if）
+score := 85
+switch {
+case score >= 90:
+    fmt.Println("优秀")
+case score >= 80:
+    fmt.Println("良好")
+case score >= 60:
+    fmt.Println("及格")
+default:
+    fmt.Println("不及格")
+}
+
+// fallthrough（继续执行下一个 case）
+num := 1
+switch num {
+case 1:
+    fmt.Println("1")
+    fallthrough
+case 2:
+    fmt.Println("2")
+default:
+    fmt.Println("其他")
+}
+// 输出：1 和 2
+```
+
+### 循环语句
+
+```go
+// for 循环（基本形式）
+for i := 0; i < 5; i++ {
+    fmt.Println(i)
+}
+
+// while 风格的 for 循环
+count := 0
+for count < 5 {
+    fmt.Println(count)
+    count++
+}
+
+// 无限循环
+for {
+    fmt.Println("无限循环")
+    break  // 退出循环
+}
+
+// range 遍历
+numbers := []int{1, 2, 3, 4, 5}
+for index, value := range numbers {
+    fmt.Printf("索引: %d, 值: %d\n", index, value)
+}
+
+// 只需要值
+for _, value := range numbers {
+    fmt.Println(value)
+}
+
+// continue 和 break
+for i := 0; i < 10; i++ {
+    if i%2 == 0 {
+        continue  // 跳过偶数
+    }
+    if i > 7 {
+        break  // 大于7时退出
+    }
+    fmt.Println(i)  // 输出：1, 3, 5, 7
+}
+```
+
+## 函数
+
+### 函数定义
+
+```go
+// 基本函数
+func sayHello() {
+    fmt.Println("Hello!")
+}
+
+// 带参数的函数
+func greet(name string) {
+    fmt.Printf("Hello, %s!\n", name)
+}
+
+// 带返回值的函数
+func add(a int, b int) int {
+    return a + b
+}
+
+// 多返回值
+func divide(a, b float64) (float64, error) {
+    if b == 0 {
+        return 0, errors.New("除数不能为0")
+    }
+    return a / b, nil
+}
+
+// 命名返回值
+func calc(a, b int) (sum int, diff int) {
+    sum = a + b
+    diff = a - b
+    return  // 自动返回命名变量
+}
+```
+
+### 函数调用
+
+```go
+// 基本调用
+sayHello()
+greet("张三")
+
+// 接收返回值
+result := add(10, 20)
+fmt.Println(result)  // 输出：30
+
+// 接收多返回值
+quotient, err := divide(10, 3)
+if err != nil {
+    fmt.Println("错误:", err)
+} else {
+    fmt.Println("结果:", quotient)
+}
+```
+
+### 可变参数函数
+
+```go
+// 可变参数
+func sum(numbers ...int) int {
+    total := 0
+    for _, num := range numbers {
+        total += num
+    }
+    return total
+}
+
+result := sum(1, 2, 3, 4, 5)
+fmt.Println(result)  // 输出：15
+```
+
+### 匿名函数和闭包
+
+```go
+// 匿名函数
+func() {
+    fmt.Println("这是一个匿名函数")
+}()  // 立即执行
+
+// 赋值给变量
+add := func(a, b int) int {
+    return a + b
+}
+result := add(10, 20)
+
+// 闭包
+func makeCounter() func() int {
+    count := 0
+    return func() int {
+        count++
+        return count
+    }
+}
+
+counter := makeCounter()
+fmt.Println(counter())  // 输出：1
+fmt.Println(counter())  // 输出：2
+fmt.Println(counter())  // 输出：3
+```
+
+## 数组与切片
+
+### 数组
+
+```go
+// 固定长度数组
+var arr1 [5]int
+arr1[0] = 1
+arr1[1] = 2
+
+// 声明并初始化
+arr2 := [5]int{1, 2, 3, 4, 5}
+
+// 让编译器推断长度
+arr3 := [...]int{1, 2, 3, 4, 5}
+
+// 多维数组
+matrix := [2][3]int{
+    {1, 2, 3},
+    {4, 5, 6},
+}
+```
+
+### 切片（Slice）
+
+```go
+// 创建切片
+slice1 := []int{1, 2, 3, 4, 5}
+
+// 从数组创建切片
+arr := [5]int{1, 2, 3, 4, 5}
+slice2 := arr[1:4]  // [2, 3, 4]
+
+// 使用 make 创建
+slice3 := make([]int, 5)       // 长度5，容量5
+slice4 := make([]int, 3, 10)   // 长度3，容量10
+
+// 切片操作
+numbers := []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
+
+fmt.Println(numbers[2:5])   // [3, 4, 5]
+fmt.Println(numbers[:3])    // [1, 2, 3]
+fmt.Println(numbers[7:])    // [8, 9, 10]
+fmt.Println(numbers[:])     // 所有元素
+
+// append 添加元素
+slice := []int{1, 2, 3}
+slice = append(slice, 4)
+slice = append(slice, 5, 6, 7)
+slice = append(slice, []int{8, 9}...)
+
+// len 和 cap
+fmt.Println(len(slice))  // 长度
+fmt.Println(cap(slice))  // 容量
+
+// copy 复制切片
+src := []int{1, 2, 3}
+dst := make([]int, len(src))
+copy(dst, src)
+```
+
+## Map（映射）
+
+```go
+// 创建 map
+ages := make(map[string]int)
+ages["张三"] = 25
+ages["李四"] = 30
+
+// 声明并初始化
+scores := map[string]int{
+    "张三": 90,
+    "李四": 85,
+    "王五": 95,
+}
+
+// 访问元素
+age := ages["张三"]
+fmt.Println(age)  // 输出：25
+
+// 检查键是否存在
+value, exists := ages["王五"]
+if exists {
+    fmt.Println("存在:", value)
+} else {
+    fmt.Println("不存在")
+}
+
+// 删除元素
+delete(ages, "李四")
+
+// 遍历 map
+for name, age := range ages {
+    fmt.Printf("%s: %d岁\n", name, age)
+}
+
+// 修改元素
+ages["张三"] = 26
+```
+
+## 结构体（Struct）
+
+```go
+// 定义结构体
+type Person struct {
+    Name string
+    Age  int
+    City string
+}
+
+// 创建结构体实例
+p1 := Person{"张三", 25, "北京"}
+p2 := Person{Name: "李四", Age: 30, City: "上海"}
+p3 := Person{Name: "王五"}  // 其他字段为零值
+
+// 访问字段
+fmt.Println(p1.Name)  // 输出：张三
+fmt.Println(p1.Age)   // 输出：25
+
+// 修改字段
+p1.Age = 26
+
+// 结构体指针
+p4 := &Person{Name: "赵六", Age: 28}
+fmt.Println(p4.Name)  // 自动解引用
+
+// 匿名结构体
+user := struct {
+    ID   int
+    Name string
+}{
+    ID:   1,
+    Name: "测试用户",
+}
+```
+
+### 结构体方法
+
+```go
+// 定义方法
+type Rectangle struct {
+    Width  float64
+    Height float64
+}
+
+// 值接收者
+func (r Rectangle) Area() float64 {
+    return r.Width * r.Height
+}
+
+// 指针接收者（可以修改原值）
+func (r *Rectangle) Scale(factor float64) {
+    r.Width *= factor
+    r.Height *= factor
+}
+
+rect := Rectangle{Width: 10, Height: 5}
+fmt.Println(rect.Area())  // 输出：50
+
+rect.Scale(2)
+fmt.Println(rect.Width)   // 输出：20
+```
+
+## 接口（Interface）
+
+```go
+// 定义接口
+type Animal interface {
+    Speak() string
+    Move() string
+}
+
+// 实现接口
+type Dog struct {
+    Name string
+}
+
+func (d Dog) Speak() string {
+    return "汪汪"
+}
+
+func (d Dog) Move() string {
+    return "跑"
+}
+
+type Cat struct {
+    Name string
+}
+
+func (c Cat) Speak() string {
+    return "喵喵"
+}
+
+func (c Cat) Move() string {
+    return "走"
+}
+
+// 使用接口
+func makeSound(a Animal) {
+    fmt.Println(a.Speak())
+}
+
+dog := Dog{Name: "旺财"}
+cat := Cat{Name: "咪咪"}
+
+makeSound(dog)  // 输出：汪汪
+makeSound(cat)  // 输出：喵喵
+```
+
+### 空接口
+
+```go
+// 空接口可以接受任何类型
+var anything interface{}
+
+anything = 42
+anything = "hello"
+anything = true
+
+// 类型断言
+value := anything.(string)
+
+// 类型断言检查
+if str, ok := anything.(string); ok {
+    fmt.Println("是字符串:", str)
+}
+
+// 类型选择
+func describe(i interface{}) {
+    switch v := i.(type) {
+    case int:
+        fmt.Printf("整数: %d\n", v)
+    case string:
+        fmt.Printf("字符串: %s\n", v)
+    case bool:
+        fmt.Printf("布尔值: %t\n", v)
+    default:
+        fmt.Printf("未知类型: %T\n", v)
+    }
+}
+```
+
+## 错误处理
+
+```go
+// 错误类型
+type error interface {
+    Error() string
+}
+
+// 创建错误
+func divide(a, b float64) (float64, error) {
+    if b == 0 {
+        return 0, errors.New("除数不能为0")
+    }
+    return a / b, nil
+}
+
+// 错误处理
+result, err := divide(10, 0)
+if err != nil {
+    fmt.Println("发生错误:", err)
+    return
+}
+fmt.Println("结果:", result)
+
+// 自定义错误
+type MyError struct {
+    Code    int
+    Message string
+}
+
+func (e *MyError) Error() string {
+    return fmt.Sprintf("错误 %d: %s", e.Code, e.Message)
+}
+
+func doSomething() error {
+    return &MyError{Code: 404, Message: "未找到"}
+}
+```
+
+### defer 延迟执行
+
+```go
+// defer 在函数返回前执行
+func readFile() {
+    file, err := os.Open("test.txt")
+    if err != nil {
+        fmt.Println("打开文件失败:", err)
+        return
+    }
+    defer file.Close()  // 函数返回前关闭文件
+
+    // 读取文件内容...
+}
+
+// 多个 defer 按 LIFO 顺序执行
+func multipleDefers() {
+    defer fmt.Println("第一个")
+    defer fmt.Println("第二个")
+    defer fmt.Println("第三个")
+    // 输出顺序：第三个、第二个、第一个
+}
+```
+
+## 并发编程
+
+### Goroutine
+
+```go
+// 创建 goroutine
+func sayHello() {
+    fmt.Println("Hello from goroutine!")
+}
+
+go sayHello()  // 启动 goroutine
+
+// 带参数的 goroutine
+func greet(name string) {
+    fmt.Printf("Hello, %s!\n", name)
+}
+
+go greet("张三")
+go greet("李四")
+
+// 匿名函数 goroutine
+go func() {
+    fmt.Println("匿名 goroutine")
+}()
+```
+
+### Channel（通道）
+
+```go
+// 创建通道
+ch := make(chan int)
+
+// 发送数据
+ch <- 42
+
+// 接收数据
+value := <-ch
+
+// 带缓冲的通道
+bufferedCh := make(chan int, 10)
+bufferedCh <- 1
+bufferedCh <- 2
+
+// 关闭通道
+close(ch)
+
+// 检查通道是否关闭
+value, ok := <-ch
+if !ok {
+    fmt.Println("通道已关闭")
+}
+```
+
+### Channel 示例
+
+```go
+// 生产者-消费者模式
+func producer(ch chan int) {
+    for i := 0; i < 5; i++ {
+        ch <- i
+        fmt.Println("生产:", i)
+    }
+    close(ch)
+}
+
+func consumer(ch chan int) {
+    for value := range ch {
+        fmt.Println("消费:", value)
+    }
+}
+
+ch := make(chan int)
+go producer(ch)
+consumer(ch)
+
+// 多路复用（select）
+func main() {
+    ch1 := make(chan int)
+    ch2 := make(chan int)
+
+    go func() { ch1 <- 1 }()
+    go func() { ch2 <- 2 }()
+
+    for i := 0; i < 2; i++ {
+        select {
+        case v := <-ch1:
+            fmt.Println("从 ch1 收到:", v)
+        case v := <-ch2:
+            fmt.Println("从 ch2 收到:", v)
+        }
+    }
+}
+```
+
+## 包管理
+
+### 导入包
+
+```go
+import (
+    "fmt"
+    "os"
+    "strings"
+)
+
+// 别名导入
+import (
+    f "fmt"
+    myos "os"
+)
+
+// 点导入（不推荐）
+import . "fmt"
+
+// 空白导入（只执行 init）
+import _ "database/sql/driver"
+```
+
+### 创建包
+
+```go
+// mypackage/math.go
+package mypackage
+
+// 导出（首字母大写）
+func Add(a, b int) int {
+    return a + b
+}
+
+// 未导出（首字母小写，包外不可见）
+func internalHelper() {
+    // ...
+}
+
+// init 函数（包加载时自动执行）
+func init() {
+    fmt.Println("mypackage 已加载")
+}
+```

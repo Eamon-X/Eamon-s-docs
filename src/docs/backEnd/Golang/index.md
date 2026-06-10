@@ -55,7 +55,10 @@ go env -w GOPROXY=https://goproxy.cn,direct
 	  fmt.Println("Hello, World! 来自我的第一个Go程序。")
 	}
 ```
-
+格式化代码： 
+```shell
+go fmt main.go
+```
 运行程序：
 
 1. 快速运行
