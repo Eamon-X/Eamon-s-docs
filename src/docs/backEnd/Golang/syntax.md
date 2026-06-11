@@ -160,7 +160,7 @@ fmt.Printf("Name: %s, Age: %d\n", "张三", 25)  // 默认不换行，用\n换�
 fmt.Printf("%T\n", name)  // 输出 name 的类型，例如 string
 fmt.Printf("%T\n", age)   // 输出 age 的类型，例如 int
 
-// 格式化字符串
+// 拼接字符串
 str := fmt.Sprintf("Name: %s, Age: %d", "张三", 25)
 
 // 格式化输入
@@ -176,17 +176,18 @@ fmt.Scanf("Name: %s, Age: %d", &name, &age)
 import "strings"
 
 // 常用字符串操作
-strings.Contains("hello world", "world")     // true
-strings.HasPrefix("hello", "he")             // true
-strings.HasSuffix("hello", "lo")             // true
-strings.Index("hello", "ll")                 // 2
-strings.Join([]string{"a", "b", "c"}, "-")   // "a-b-c"
-strings.Split("a-b-c", "-")                  // ["a", "b", "c"]
-strings.ToLower("HELLO")                     // "hello"
-strings.ToUpper("hello")                     // "HELLO"
-strings.TrimSpace("  hello  ")               // "hello"
-strings.Replace("hello", "l", "L", -1)       // "heLLo"
-strings.Count("hello", "l")                  // 2
+strings.Contains("hello world", "world")     // 判断字符串"hello world"是否包含子字符串"world"，返回true
+strings.HasPrefix("hello", "he")             // 判断字符串"hello"是否以"he"开头，返回true
+strings.HasSuffix("hello", "lo")             // 判断字符串"hello"是否以"lo"结尾，返回true
+strings.Index("hello", "l")                 // 从前往后，查找子字符串"l"在字符串"hello"中的第一个索引，返回2（索引为2，返回-1表示未找到）
+strings.LastIndex("hello", "l")             // 从后往前，查找子字符串"l"在字符串"hello"中的最后一个索引，返回3（索引为3，返回-1表示未找到）
+strings.Join([]string{"a", "b", "c"}, "-")   // 把切片转换为字符串，用 "-" 分隔，返回 "a-b-c"
+strings.Split("a-b-c", "-")                  // 分割字符串，返回切片 [a b c]
+strings.ToLower("HELLO")                     // 转换为小写，返回 "hello"
+strings.ToUpper("hello")                     // 转换为大写，返回 "HELLO"
+strings.TrimSpace("  hello  ")               // 移除字符串首尾的空格，返回 "hello"
+strings.Replace("hello", "l", "L", -1)       // 替换子字符串"l"为"L"，返回 "heLLo"
+strings.Count("hello", "l")                  // 返回子字符串"l"在字符串"hello"中出现的次数，返回2
 ```
 
 ### os 包
@@ -330,11 +331,14 @@ const (
 - 复数类型：complex64, complex128
 - 字符串类型：string
 - 布尔类型：bool
+- 字节类型：byte（uint8 的别名）
+- 字符类型：rune（int32 的别名，表示 Unicode 码点）
 
 #### 数值类型
 
 ```go
 // 整数类型
+// int类型的变量默认值为 0
 var a int8 = 127        // -128 到 127
 var b int16 = 32767     // -32768 到 32767
 var c int32 = 2147483647
@@ -345,18 +349,26 @@ var f uint8 = 255       // 0 到 255
 var g uint = 100        // 无符号整数
 
 // 浮点数类型
+// float32和float64类型的变量默认值为 0.0
 var h float32 = 3.14
 var i float64 = 3.141592653589793
+var j float32 = 3.14e+2 // 表示 3.14 * 10^2
+var k float32 = 3.14e-2 // 表示 3.14 / 10^2
+
+// 浮点数精度丢失问题，需要使用第三方包 decimal 来处理
+var l float64 = 1129.6
+fmt.Println(l * 100) // 输出：112959.99999999999999
 
 // 复数类型
-var j complex64 = 1 + 2i
-var k complex128 = 1 + 2i
+var m complex64 = 1 + 2i
+var n complex128 = 1 + 2i
 ```
 
 #### 字符串和布尔类型
 
 ```go
 // 字符串
+// string类型的变量默认值为 "" 空
 var name string = "Hello, World!"
 var message = "这是一段中文文本"
 
@@ -364,17 +376,91 @@ var message = "这是一段中文文本"
 str1 := "Hello"
 str2 := "World"
 result := str1 + " " + str2  // 字符串拼接
-length := len(str1)           // 获取字符串长度
+length := len(str1)           // 获取字符串长度。Go 源码默认 UTF-8 编码，汉字占3个字节，英文占1个字节
 
 // 布尔类型
+// 布尔类型的变量默认值为 false
 var isActive bool = true
 var isDeleted bool = false
 ```
 
-#### 类型转换
+#### byte 和 rune 类型
+
+`byte` 和 `rune` 是 Go 中用于处理文本的两个特殊类型，它们分别是 `uint8` 和 `int32` 的别名。
 
 ```go
+// byte 是 uint8 的别名，表示单个字节（0-255）
+// 常用于处理 ASCII 字符或二进制数据
+var b1 byte = 'A'        // 65（ASCII 码）
+var b2 byte = 97         // 'a'
+var b3 byte = 0x41       // 'A'（十六进制）
+
+// rune 是 int32 的别名，表示一个 Unicode 码点（字符的唯一编号），UTF-8的一个字符
+// 用于处理多字节字符（如中文、emoji 等），一个 rune 代表一个完整字符
+var r1 rune = '中'       // 20013（Unicode 码点）
+var r2 rune = '👋'       // 128075（emoji）
+var r3 rune = '\u4E2D'   // '中'（Unicode 转义）
+
+// 字符串遍历的区别
+s := "Hello世界"
+
+// 按字节遍历（byte）
+for i := 0; i < len(s); i++ {
+    fmt.Printf("%c ", s[i])  // 输出：H e l l o ä ¸  ç   (乱码，因为汉字被拆分成字节)
+}
+
+// 按字符遍历（rune）
+for _, r := range s {
+    fmt.Printf("%c ", r)  // 输出：H e l l o 世 界 (正确)
+}
+
+// 字符串长度
+// 注意：unsafe.Sizeof(s) 无法查看string类型的数据占用的字节数，只能查看指针占用的字节数
+fmt.Println(len(s))              // 11（字节数：5个英文 + 2个汉字×3 = 11）
+fmt.Println(len([]rune(s)))      // 7（字符数：5个英文 + 2个汉字 = 7）
+
+// 修改字符串中的字符
+// 注意：字符串是不可变的，不能直接修改字符串中的字符。要修改字符串，需要先将字符串转换为字节数组或 rune 切片，然后修改切片中的元素，修改后会重新分配内存并复制字节数组或 rune 切片。
+// 或者使用 strings.Replace 或 strings.ReplaceAll 函数来替换子字符串。
+S := "Hello世界"
+byteS := []byte(S) // 将字符串转换为字节数组
+byteS[0] = 'h' // 修改第一个字节为h
+fmt.Println(string(byteS)) // 转换为字符串后输出结果：hello世界
+
+runeS := []rune(S) // 将字符串转换为 rune 切片
+runeS[5] = '问' // 修改第一个 rune 为问
+fmt.Println(string(runeS)) // 转换为字符串后输出结果：hello问界
+```
+
+
+**byte 和 rune 的区别：**
+
+| 特性 | byte | rune |
+|------|------|------|
+| 底层类型 | uint8 | int32 |
+| 大小 | 1 字节 | 4 字节 |
+| 用途 | ASCII 字符、二进制数据 | Unicode 字符 |
+| 字符范围 | 0-255 | 所有 Unicode 码点 |
+
+**使用建议：**
+
+- 处理 ASCII 文本或二进制数据时使用 `byte`
+- 处理包含多语言字符（中文、日文、emoji 等）时使用 `rune`
+- 计算字符串"字符数"而非"字节数"时，先转换为 `[]rune`
+
+#### 类型转换
+
+- 不推荐把高精度类型转换为低精度类型，否则会导致精度丢失。
+- 不推荐把float类型转换为int类型，否则会导致溢出问题。
+- 不允许将整型强制转换为布尔类型，否则会导致逻辑错误。
+- 布尔型无法参与数值运算，也无法与其他类型进行转换。
+- Go 不支持隐式类型转换，必须显式转换。
+- 转换时要注意溢出问题，否则会导致数据丢失。
+```go
+// var d float64 = a  // 错误！必须显式转换
+
 // 显式类型转换
+// 数值类型之间转换 
 var a int = 10
 var b float64 = float64(a)
 var c int = int(b)
@@ -383,8 +469,17 @@ var c int = int(b)
 var n1 int16 = 130
 fmt.Println(int8(n1)) // 输出：-126
 
-// 注意：Go 不支持隐式类型转换
-// var d float64 = a  // 错误！必须显式转换
+// 其他类型转换为string类型
+// 通过Sprintf转换
+var i int = 10
+var f float64 = 10.0
+var b bool = true
+var by byte = 'a'
+strs := fmt.Sprintf("%d%f%c%t", i, f, by, b) // 输出：1010.000000atrue
+// 通过strconv包转换
+var str string = "Hello, World!"
+var str2 string = strconv.Itoa(a)
+var str3 string = strconv.FormatFloat(b, 'f', 2, 64)
 ```
 
 ## 控制结构
