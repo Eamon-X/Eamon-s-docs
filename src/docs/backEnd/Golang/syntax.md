@@ -477,9 +477,16 @@ var b bool = true
 var by byte = 'a'
 strs := fmt.Sprintf("%d%f%c%t", i, f, by, b) // 输出：1010.000000atrue
 // 通过strconv包转换
-var str string = "Hello, World!"
-var str2 string = strconv.Itoa(a)
-var str3 string = strconv.FormatFloat(b, 'f', 2, 64)
+var str1 string = strconv.FormatInt(int64(i), 10) // 参数1：要转换的整数，参数2：进制。 输出："10" 
+var str2 string = strconv.FormatFloat(f, 'f', 2, 64) // 参数1：要转换的浮点数，参数2：格式化输出类型，参数3：精度（-1表示不对小数进行格式化），参数4：输入待转换的浮点数的类型。 输出："10.00" 
+var str3 string = strconv.FormatBool(b) // 参数1：要转换的布尔值。 输出："true" 
+var str4 string = strconv.FormatUint(uint64(by), 10) // 参数1：要转换的字节，参数2：进制。 输出："97" 
+var str5 string = strconv.FormatRune(rune(by)) // 参数1：要转换的 rune。 输出："a" 
+
+// string 类型转换为其他类型
+var str string = "10"
+var i2, err = strconv.ParseInt(str, 10, 32) // 参数1：要转换的字符串，参数2：进制，参数3：输出类型，必须是 int32 或 int64。 输出：10
+var f2, err = strconv.ParseFloat(str, 64) // 参数1：要转换的字符串，参数2：输入待转换的浮点数的类型。 输出：10.0
 ```
 
 ## 控制结构
@@ -513,6 +520,7 @@ if score >= 90 {
 }
 
 // if 带初始化语句
+// age 只能在 if 语句中使用，超出作用域后不可用
 if age := 20; age >= 18 {
     fmt.Println("成年人")
 }
@@ -520,6 +528,7 @@ if age := 20; age >= 18 {
 ```
 
 ### switch 语句
+在 go 中的 switch 的 case 中可以不使用break，默认只执行当前 case 中的语句。
 
 ```go
 // 基本 switch
@@ -548,7 +557,17 @@ default:
     fmt.Println("不及格")
 }
 
-// fallthrough（继续执行下一个 case）
+// case存在多个条件
+switch day {
+case "Monday", "Tuesday":
+    fmt.Println("工作日")
+case "Wednesday", "Thursday":
+    fmt.Println("工作日")
+default:
+    fmt.Println("其他")
+}
+
+// 每个fallthrough只会继续执行下一个 case，而不是一直执行到 default
 num := 1
 switch num {
 case 1:
@@ -592,6 +611,11 @@ for index, value := range numbers {
 // 只需要值
 for _, value := range numbers {
     fmt.Println(value)
+}
+
+// 字符串遍历
+for _, char := range "Hello, World!" {
+    fmt.Println(char)
 }
 
 // continue 和 break
