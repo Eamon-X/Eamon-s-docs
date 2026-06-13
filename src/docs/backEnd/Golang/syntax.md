@@ -489,251 +489,18 @@ var i2, err = strconv.ParseInt(str, 10, 32) // 参数1：要转换的字符串�
 var f2, err = strconv.ParseFloat(str, 64) // 参数1：要转换的字符串，参数2：输入待转换的浮点数的类型。 输出：10.0
 ```
 
-## 控制结构
+### 复合数据类型
 
-### 条件语句
+复合数据类型包括：
+- 数组：数组是跟基本数据类型一样属于值类型而非引用类型
+- 切片
+- 结构体
+- 枚举
+- 枚举类型
 
-```go
-// if 语句
-age := 18
-if age >= 18 {
-    fmt.Println("成年人")
-}
+#### 数组
 
-// if-else 语句
-if age >= 18 {
-    fmt.Println("成年人")
-} else {
-    fmt.Println("未成年人")
-}
-
-// if-else if-else 语句
-score := 85
-if score >= 90 {
-    fmt.Println("优秀")
-} else if score >= 80 {
-    fmt.Println("良好")
-} else if score >= 60 {
-    fmt.Println("及格")
-} else {
-    fmt.Println("不及格")
-}
-
-// if 带初始化语句
-// age 只能在 if 语句中使用，超出作用域后不可用
-if age := 20; age >= 18 {
-    fmt.Println("成年人")
-}
-// age 在这里不可用
-```
-
-### switch 语句
-在 go 中的 switch 的 case 中可以不使用break，默认只执行当前 case 中的语句。
-
-```go
-// 基本 switch
-day := "Monday"
-switch day {
-case "Monday":
-    fmt.Println("星期一")
-case "Tuesday":
-    fmt.Println("星期二")
-case "Wednesday":
-    fmt.Println("星期三")
-default:
-    fmt.Println("其他")
-}
-
-// 不带表达式的 switch（类似 if-else if）
-score := 85
-switch {
-case score >= 90:
-    fmt.Println("优秀")
-case score >= 80:
-    fmt.Println("良好")
-case score >= 60:
-    fmt.Println("及格")
-default:
-    fmt.Println("不及格")
-}
-
-// case存在多个条件
-switch day {
-case "Monday", "Tuesday":
-    fmt.Println("工作日")
-case "Wednesday", "Thursday":
-    fmt.Println("工作日")
-default:
-    fmt.Println("其他")
-}
-
-// 每个fallthrough只会继续执行下一个 case，而不是一直执行到 default
-num := 1
-switch num {
-case 1:
-    fmt.Println("1")
-    fallthrough
-case 2:
-    fmt.Println("2")
-default:
-    fmt.Println("其他")
-}
-// 输出：1 和 2
-```
-
-### 循环语句
-
-```go
-// for 循环（基本形式）
-for i := 0; i < 5; i++ {
-    fmt.Println(i)
-}
-
-// while 风格的 for 循环
-count := 0
-for count < 5 {
-    fmt.Println(count)
-    count++
-}
-
-// 无限循环
-for {
-    fmt.Println("无限循环")
-    break  // 退出循环
-}
-
-// range 遍历
-numbers := []int{1, 2, 3, 4, 5}
-for index, value := range numbers {
-    fmt.Printf("索引: %d, 值: %d\n", index, value)
-}
-
-// 只需要值
-for _, value := range numbers {
-    fmt.Println(value)
-}
-
-// 字符串遍历
-for _, char := range "Hello, World!" {
-    fmt.Println(char)
-}
-
-// continue 和 break
-for i := 0; i < 10; i++ {
-    if i%2 == 0 {
-        continue  // 跳过偶数
-    }
-    if i > 7 {
-        break  // 大于7时退出
-    }
-    fmt.Println(i)  // 输出：1, 3, 5, 7
-}
-```
-
-## 函数
-
-### 函数定义
-
-```go
-// 基本函数
-func sayHello() {
-    fmt.Println("Hello!")
-}
-
-// 带参数的函数
-func greet(name string) {
-    fmt.Printf("Hello, %s!\n", name)
-}
-
-// 带返回值的函数
-func add(a int, b int) int {
-    return a + b
-}
-
-// 多返回值
-func divide(a, b float64) (float64, error) {
-    if b == 0 {
-        return 0, errors.New("除数不能为0")
-    }
-    return a / b, nil
-}
-
-// 命名返回值
-func calc(a, b int) (sum int, diff int) {
-    sum = a + b
-    diff = a - b
-    return  // 自动返回命名变量
-}
-```
-
-### 函数调用
-
-```go
-// 基本调用
-sayHello()
-greet("张三")
-
-// 接收返回值
-result := add(10, 20)
-fmt.Println(result)  // 输出：30
-
-// 接收多返回值
-quotient, err := divide(10, 3)
-if err != nil {
-    fmt.Println("错误:", err)
-} else {
-    fmt.Println("结果:", quotient)
-}
-```
-
-### 可变参数函数
-
-```go
-// 可变参数
-func sum(numbers ...int) int {
-    total := 0
-    for _, num := range numbers {
-        total += num
-    }
-    return total
-}
-
-result := sum(1, 2, 3, 4, 5)
-fmt.Println(result)  // 输出：15
-```
-
-### 匿名函数和闭包
-
-```go
-// 匿名函数
-func() {
-    fmt.Println("这是一个匿名函数")
-}()  // 立即执行
-
-// 赋值给变量
-add := func(a, b int) int {
-    return a + b
-}
-result := add(10, 20)
-
-// 闭包
-func makeCounter() func() int {
-    count := 0
-    return func() int {
-        count++
-        return count
-    }
-}
-
-counter := makeCounter()
-fmt.Println(counter())  // 输出：1
-fmt.Println(counter())  // 输出：2
-fmt.Println(counter())  // 输出：3
-```
-
-## 数组与切片
-
-### 数组
+**数组的长度是固定的，数组的长度也是类型的一部分**
 
 ```go
 // 固定长度数组
@@ -747,49 +514,135 @@ arr2 := [5]int{1, 2, 3, 4, 5}
 // 让编译器推断长度
 arr3 := [...]int{1, 2, 3, 4, 5}
 
+// 指定索引值的方式来初始化数组
+arr4 := [...]int{1: 10, 4: 40} // 输出：[0 10 0 0 40]
+
 // 多维数组
-matrix := [2][3]int{
+matrix := [2][3]int{ // 2行3列
     {1, 2, 3},
     {4, 5, 6},
 }
+// 多维数组让编译器推断长度
+matrix1 := [...][3]int{ // 2行3列
+    {1, 2, 3}, 
+    {4, 5, 6},
+}
+
+/* 错误写法：多维数组只有第一层可以使用...来推断长度
+matrix2 := [2][...]int{ // 2行3列
+    {1, 2, 3},
+    {4, 5, 6},
+}
+
+本质原因：Go 的数组类型是 [N]T，其中 N 是类型的一部分
+多维数组 [2][3]int 的实际类型是 [2]([3]int)，即元素类型为 [3]int 的数组
+内层数组的长度是元素类型定义的一部分，必须是确定的类型
+如果写成 [2][...]int，相当于元素类型是 [?]int，这不是合法类型，编译器无法推断
+// 这相当于：
+arr := [2]SomeType{...}  // SomeType 必须是已知类型
+
+// 如果写成 [2][...]int，相当于：
+arr := [2][?]int{...}    // [?]int 不是合法类型，编译器不知道元素类型是什么
+*/
+
+// 遍历数组
+for i := 0; i < len(arr4); i++ {
+    fmt.Println(arr4[i])
+}
+
+for i, v := range arr4 {
+    fmt.Println(i, v)
+}
+
+// 获取数组的长度
+len(arr4) // 输出5
 ```
 
-### 切片（Slice）
+#### 切片（Slice）
+
+**切片的本质是对底层数组的封装，包含指向底层数组的指针、长度（len）和容量（cap）。**
+**切片的长度是可变的**
 
 ```go
 // 创建切片
+slice := []int{} // 空切片 nil 切片，长度为0，容量为0
 slice1 := []int{1, 2, 3, 4, 5}
-
-// 从数组创建切片
-arr := [5]int{1, 2, 3, 4, 5}
-slice2 := arr[1:4]  // [2, 3, 4]
-
-// 使用 make 创建
-slice3 := make([]int, 5)       // 长度5，容量5
-slice4 := make([]int, 3, 10)   // 长度3，容量10
 
 // 切片操作
 numbers := []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
-
 fmt.Println(numbers[2:5])   // [3, 4, 5]
 fmt.Println(numbers[:3])    // [1, 2, 3]
 fmt.Println(numbers[7:])    // [8, 9, 10]
 fmt.Println(numbers[:])     // 所有元素
 
+// 从数组创建切片，从切片创建切片是同理的
+arr := [5]int{1, 2, 3, 4, 5}
+slice2 := arr[:]  // 获取数组的所有元素，返回[1, 2, 3, 4, 5]
+slice3 := arr[1:]  // 左闭右开，获取数组的第2个元素到数组的最后一个元素，返回[2, 3, 4, 5]
+slice4 := arr[:4]  // 左闭右开，获取数组的第1个元素到第4个元素，返回[1, 2, 3, 4]
+slice5 := arr[1:4]  // 左闭右开，获取数组的第2个元素到第4个元素，返回[2, 3, 4]
+
+// 使用 make 创建
+sliceMake1 := make([]int, 5)       // 长度5，容量5，返回[0 0 0 0 0]
+sliceMake2 := make([]int, 3, 10)   // 长度3，容量10，返回[0 0 0]
+
+// copy 复制切片，相当于深拷贝
+src := []int{1, 2, 3}
+dst := make([]int, len(src))
+copy(dst, src)
+fmt.Println(dst) // 输出：[1 2 3]
+
 // append 添加元素
 slice := []int{1, 2, 3}
 slice = append(slice, 4)
 slice = append(slice, 5, 6, 7)
-slice = append(slice, []int{8, 9}...)
+slice = append(slice, []int{8, 9}...) // 合并切片，... 表示将切片展开为多个参数，返回[1, 2, 3, 4, 5, 6, 7, 8, 9]
 
-// len 和 cap
-fmt.Println(len(slice))  // 长度
-fmt.Println(cap(slice))  // 容量
+// 通过 append 来删除切片中的元素
+slice = append(slice[:2], slice[3:]...) // 删除索引为2的元素，返回[1, 2, 4, 5, 6, 7, 8, 9]
 
-// copy 复制切片
-src := []int{1, 2, 3}
-dst := make([]int, len(src))
-copy(dst, src)
+/**
+ * 切片容量与底层数组的关系
+ * 
+ * 切片是对底层数组的引用，切片本身不存储数据，只包含：
+ * - 指向底层数组的指针
+ * - 长度（len）：切片中元素的个数
+ * - 容量（cap）：从切片起始位置到底层数组末尾的元素个数
+ */
+
+// 示例1：从数组创建切片，容量 = 数组长度 - 起始索引
+arr := [10]int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
+s1 := arr[2:5]       // 长度 3，容量 8（从索引2到数组末尾共8个元素）
+fmt.Println(len(s1)) // 3
+fmt.Println(cap(s1)) // 8
+
+s2 := arr[5:]        // 长度 5，容量 5（从索引5到数组末尾共5个元素）
+fmt.Println(len(s2)) // 5
+fmt.Println(cap(s2)) // 5
+
+// 示例2：append 扩容机制
+// 当 append 超出当前容量时，Go 会自动创建更大的底层数组并复制数据
+s3 := []int{1, 2, 3}       // 长度 3，容量 3
+s3 = append(s3, 4)         // 需要 4，容量 3 不够，触发扩容 → 容量 6
+s3 = append(s3, 5, 6, 7)   // 需要 7，容量 6 不够，触发扩容 → 容量 12
+s3 = append(s3, 8, 9)      // 需要 9，容量 12 够用，不扩容
+fmt.Println(len(s3))       // 9
+fmt.Println(cap(s3))       // 12
+
+/**
+ * Go 切片扩容规则（Go 1.18+）：
+ * 
+ * 1. 新容量需求 > 旧容量 × 2 → 直接分配到需求大小
+ * 2. 旧容量 < 256 → 容量翻倍（×2）
+ * 3. 旧容量 ≥ 256 → 容量增长约 1.25 倍（实际会做内存对齐）
+ * 
+ * 扩容过程：
+ * - 分配新的更大的底层数组
+ * - 将旧数组数据复制到新数组
+ * - 切片指针指向新数组
+ * - 旧数组如果没有其他引用，会被 GC 回收
+ */
+
 ```
 
 ## Map（映射）
@@ -893,6 +746,318 @@ fmt.Println(rect.Area())  // 输出：50
 rect.Scale(2)
 fmt.Println(rect.Width)   // 输出：20
 ```
+
+
+## 控制结构
+
+### 条件语句
+
+```go
+// if 语句
+age := 18
+if age >= 18 {
+    fmt.Println("成年人")
+}
+
+// if-else 语句
+if age >= 18 {
+    fmt.Println("成年人")
+} else {
+    fmt.Println("未成年人")
+}
+
+// if-else if-else 语句
+score := 85
+if score >= 90 {
+    fmt.Println("优秀")
+} else if score >= 80 {
+    fmt.Println("良好")
+} else if score >= 60 {
+    fmt.Println("及格")
+} else {
+    fmt.Println("不及格")
+}
+
+// if 带初始化语句
+// age 只能在 if 语句中使用，超出作用域后不可用
+if age := 20; age >= 18 {
+    fmt.Println("成年人")
+}
+// age 在这里不可用
+```
+
+### switch 语句
+在 go 中的 switch 的 case 中可以不使用break，默认只执行当前 case 中的语句。
+
+```go
+// 基本 switch
+day := "Monday"
+switch day {
+case "Monday":
+    fmt.Println("星期一")
+case "Tuesday":
+    fmt.Println("星期二")
+case "Wednesday":
+    fmt.Println("星期三")
+default:
+    fmt.Println("其他")
+}
+
+// 不带表达式的 switch（类似 if-else if）
+score := 85
+switch {
+case score >= 90:
+    fmt.Println("优秀")
+case score >= 80:
+    fmt.Println("良好")
+case score >= 60:
+    fmt.Println("及格")
+default:
+    fmt.Println("不及格")
+}
+
+// case存在多个条件
+switch day {
+case "Monday", "Tuesday":
+    fmt.Println("工作日")
+case "Wednesday", "Thursday":
+    fmt.Println("工作日")
+default:
+    fmt.Println("其他")
+}
+
+// 每个fallthrough只会继续执行下一个 case，而不是一直执行到 default
+num := 1
+switch num {
+case 1:
+    fmt.Println("1")
+    fallthrough
+case 2:
+    fmt.Println("2")
+default:
+    fmt.Println("其他") 
+}
+// 输出：1 和 2
+```
+
+### 循环语句
+
+```go
+// for 循环（基本形式）
+for i := 0; i < 5; i++ {
+    fmt.Println(i)
+}
+
+// while 风格的 for 循环
+count := 0
+for count < 5 {
+    fmt.Println(count)
+    count++
+}
+
+// 无限循环
+for {
+    fmt.Println("无限循环")
+    break  // 退出循环
+}
+
+// range 遍历
+/**
+ * for-range 的使用方法
+ * 
+ * 语法：for 索引, 值 := range 集合 { ... }
+ * 
+ * 不同集合的返回值：
+ * - 数组/切片：返回 (索引, 值)
+ * - map：返回 (键, 值)
+ * - 字符串：返回 (字节索引, rune字符)
+ * - channel：只返回值
+ */
+
+// 1. 遍历数组/切片
+nums := []int{10, 20, 30}
+for i, v := range nums {
+    fmt.Println(i, v)  // 0 10, 1 20, 2 30
+}
+
+// 只要索引
+for i := range nums {
+    fmt.Println(i)  // 0, 1, 2
+}
+
+// 只要值（用 _ 忽略索引）
+for _, v := range nums {
+    fmt.Println(v)  // 10, 20, 30
+}
+
+// 2. 遍历 map
+scores := map[string]int{"张三": 90, "李四": 85}
+for name, score := range scores {
+    fmt.Println(name, score)  // 遍历顺序不固定
+}
+
+// 只要键
+for name := range scores {
+    fmt.Println(name)
+}
+
+// 3. 遍历字符串（按 rune 字符遍历）
+s := "Hello世界"
+for i, ch := range s {
+    fmt.Printf("%d: %c\n", i, ch)  // i 是字节索引，ch 是字符
+}
+
+// 4. 遍历 channel
+ch := make(chan int, 3)
+ch <- 1
+ch <- 2
+ch <- 3
+close(ch)
+
+for v := range ch {  // channel 关闭后自动退出循环
+    fmt.Println(v)  // 1, 2, 3
+}
+
+// continue 和 break
+for i := 0; i < 10; i++ {
+    if i%2 == 0 {
+        continue  // 跳过偶数
+    }
+    if i > 7 {
+        break  // 大于7时退出
+    }
+    fmt.Println(i)  // 输出：1, 3, 5, 7
+}
+
+// 退出多重循环
+outerLoop:
+for i := 0; i < 3; i++ {
+    for j := 0; j < 3; j++ {
+        if i == 1 && j == 1 {
+            break outerLoop  // 退出外层循环
+        }
+        fmt.Println(i, j)
+    }
+}
+
+// continue 跳转到指定循环
+outerLoop:
+for i := 0; i < 3; i++ {
+    for j := 0; j < 3; j++ {
+        if i == 1 && j == 1 {
+            continue outerLoop  // 跳转到外层循环
+        }
+        fmt.Println(i, j)
+    }
+}
+
+// goto 可以通过标签进行代码间的无条件跳转
+label:
+fmt.Println("跳转到标签")
+goto label  // 跳转到标签
+```
+
+## 函数
+
+### 函数定义
+
+```go
+// 基本函数
+func sayHello() {
+    fmt.Println("Hello!")
+}
+
+// 带参数的函数
+func greet(name string) {
+    fmt.Printf("Hello, %s!\n", name)
+}
+
+// 带返回值的函数
+func add(a int, b int) int {
+    return a + b
+}
+
+// 多返回值
+func divide(a, b float64) (float64, error) {
+    if b == 0 {
+        return 0, errors.New("除数不能为0")
+    }
+    return a / b, nil
+}
+
+// 命名返回值
+func calc(a, b int) (sum int, diff int) {
+    sum = a + b
+    diff = a - b
+    return  // 自动返回命名变量
+}
+```
+
+### 函数调用
+
+```go
+// 基本调用
+sayHello()
+greet("张三")
+
+// 接收返回值
+result := add(10, 20)
+fmt.Println(result)  // 输出：30
+
+// 接收多返回值
+quotient, err := divide(10, 3)
+if err != nil {
+    fmt.Println("错误:", err)
+} else {
+    fmt.Println("结果:", quotient)
+}
+```
+
+### 可变参数函数
+
+```go
+// 可变参数
+func sum(numbers ...int) int {
+    total := 0
+    for _, num := range numbers {
+        total += num
+    }
+    return total
+}
+
+result := sum(1, 2, 3, 4, 5)
+fmt.Println(result)  // 输出：15
+```
+
+### 匿名函数和闭包
+
+```go
+// 匿名函数
+func() {
+    fmt.Println("这是一个匿名函数")
+}()  // 立即执行
+
+// 赋值给变量
+add := func(a, b int) int {
+    return a + b
+}
+result := add(10, 20)
+
+// 闭包
+func makeCounter() func() int {
+    count := 0
+    return func() int {
+        count++
+        return count
+    }
+}
+
+counter := makeCounter()
+fmt.Println(counter())  // 输出：1
+fmt.Println(counter())  // 输出：2
+fmt.Println(counter())  // 输出：3
+```
+
 
 ## 接口（Interface）
 
