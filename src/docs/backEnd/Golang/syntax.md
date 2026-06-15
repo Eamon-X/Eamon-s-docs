@@ -645,7 +645,7 @@ fmt.Println(cap(s3))       // 12
 
 ```
 
-## Map（映射）
+#### Map（映射）
 
 ```go
 // 创建 map
@@ -682,6 +682,19 @@ for name, age := range ages {
 
 // 修改元素
 ages["张三"] = 26
+
+// 把map值按照key排序并输出
+// 1. 先将map的key转换为切片
+// 2. 对切片排序
+// 3. 遍历排序后的切片，输出对应的value
+sortedKeys := make([]string, 0, len(ages))
+for key := range ages {
+    sortedKeys = append(sortedKeys, key)
+}
+sort.Strings(sortedKeys)
+for _, key := range sortedKeys {
+    fmt.Printf("%s: %d岁\n", key, ages[key])
+}
 ```
 
 ## 结构体（Struct）
@@ -961,6 +974,11 @@ goto label  // 跳转到标签
 
 ### 函数定义
 
+格式：
+func 函数名(参数列表) 返回值列表 {
+    函数体
+}
+
 ```go
 // 基本函数
 func sayHello() {
@@ -968,8 +986,24 @@ func sayHello() {
 }
 
 // 带参数的函数
-func greet(name string) {
+func greet(name string) { 
     fmt.Printf("Hello, %s!\n", name)
+}
+
+// 函数参数简写，省略类型默认取后一个参数的类型
+func sub(a, b int) int {
+    return a - b
+}
+
+// 可变参数，接收任意数量的参数
+func sum(init int, numbers ...int) int { // 表示第一个参数赋给init，后续任意数量参数赋给numbers
+    // 可变参数 numbers 是一个切片，需要遍历切片
+    // 计算切片中所有元素的总和
+    total := init
+    for _, num := range numbers {
+        total += num
+    }
+    return total
 }
 
 // 带返回值的函数
@@ -1011,22 +1045,6 @@ if err != nil {
 } else {
     fmt.Println("结果:", quotient)
 }
-```
-
-### 可变参数函数
-
-```go
-// 可变参数
-func sum(numbers ...int) int {
-    total := 0
-    for _, num := range numbers {
-        total += num
-    }
-    return total
-}
-
-result := sum(1, 2, 3, 4, 5)
-fmt.Println(result)  // 输出：15
 ```
 
 ### 匿名函数和闭包
