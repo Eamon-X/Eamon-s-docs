@@ -7,6 +7,7 @@ import fs from "fs";
 export interface SidebarItem {
   text: string;
   collapsible?: boolean;
+  collapsed?: boolean;
   items?: SidebarItem[];
   link?: string;
   order?: number;
@@ -106,9 +107,22 @@ const generateSidebar = (currentPath: string, routePath: string, blacklist: stri
         // 处理目录：递归生成子菜单
         const subItems = generateSidebar(itemPath, itemRoute, blacklist);
         if (subItems.length > 0) {
+          // 读取 config.json 配置
+          let categoryConfig: { label?: string; collapsible?: boolean; collapsed?: boolean; order?: number } = {};
+          const categoryPath = path.join(itemPath, 'config.json');
+          if (fs.existsSync(categoryPath)) {
+            try {
+              categoryConfig = JSON.parse(fs.readFileSync(categoryPath, 'utf8'));
+            } catch (error) {
+              console.warn(`解析 config.json 失败 ${categoryPath}:`, error);
+            }
+          }
+
           sidebarItems.push({
-            text: item,
-            collapsible: true,
+            text: categoryConfig.label || item,
+            collapsible: categoryConfig.collapsible ?? true,
+            collapsed: categoryConfig.collapsed ?? false,
+            order: categoryConfig.order ?? undefined,
             items: subItems
           });
         }

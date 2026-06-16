@@ -10,7 +10,13 @@ export default defineConfig({
     // https://vitepress.dev/reference/default-theme-config
     nav: [
       { text: "前端", link: "/" },
-      { text: "后端", items: [{ text: "Node.js", link: "backEnd/NodeJs" }, { text: "Golang", link: "backEnd/Golang" }] },
+      {
+        text: "后端",
+        items: [
+          { text: "Node.js", link: "backEnd/NodeJs" },
+          { text: "Golang", link: "backEnd/Golang" },
+        ],
+      },
       { text: "AI", items: [{ text: "龙虾研习室", link: "AI/ClawLab/index" }] },
     ],
 
@@ -30,7 +36,9 @@ export default defineConfig({
       "/AI/ClawLab/tutorial": genSidebar("/AI/ClawLab/tutorial"),
     },
 
-
+    outline: {
+      level: [2, 4],
+    },
 
     // socialLinks: [
     //   { icon: "github", link: "https://github.com/vuejs/vitepress" },
