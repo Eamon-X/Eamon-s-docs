@@ -168,12 +168,12 @@ func demo() {
 // 第 1 个 defer
 ```
 
-**3. 参数在注册时求值，而非执行时**
+**3. 参数在注册时确定值，而非执行时**
 
 ```go
 func demo() {
     i := 1
-    defer fmt.Println("defer 输出:", i)  // 此时 i=1，已求值
+    defer fmt.Println("defer 输出:", i)  // 此时 i=1，已确定值
     i = 2
     fmt.Println("函数输出:", i)
 }
@@ -397,7 +397,7 @@ safeFunc()
 ## panic + recover + defer 的配合
 
 ```go
-func process() (err error) {
+func process() (err error) { // 函数会自动返回 err
     defer func() {
         if r := recover(); r != nil {
             err = fmt.Errorf("发生 panic: %v", r)
@@ -411,9 +411,12 @@ func process() (err error) {
     return nil
 }
 
-err := process()
-if err != nil {
-    fmt.Println("错误:", err)
+func main() {
+	err := process()
+	if err != nil {
+		fmt.Println("错误:", err) // 错误: 发生 panic: runtime error: index out of range [10] with length 3
+	}
+    fmt.Println("程序继续执行")
 }
 ```
 

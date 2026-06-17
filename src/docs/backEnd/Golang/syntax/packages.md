@@ -210,3 +210,48 @@ file, err := os.Create("test.txt")
 file, err := os.Open("test.txt")
 file, err := os.OpenFile("test.txt", os.O_APPEND|os.O_WRONLY, 0644)
 ```
+
+### time 包
+
+```go
+import "time"
+
+// 获取当前日期时间
+time.Now()          
+
+// 时间格式化
+// 通过使用 Go 的诞生时间2006年1月2日 15时04分05秒 （速记：2026 1 2 3 4 5）
+// 2006 表示年，01 表示月，02 表示日
+// 03 表示 12小时制，15 表示 24小时制，04 表示分钟，05 表示秒
+time.Now().Format("2006-01-02 15:04:05")
+
+// 获取时间戳
+time.Now().Unix() // 单位为秒，返回 int64 类型的整数
+time.Now().UnixMilli() // 单位为毫秒，返回 int64 类型的整数
+time.Now().UnixNano() // 单位为纳秒，返回 int64 类型的整数
+
+// 时间戳转换为日期时间
+time.Unix(time.Now().Unix(), 0) // 第一个参数为时间戳，第二个参数为纳秒
+
+// 日期时间转换为时间戳
+t, err := time.ParseInLocation("2006-01-02 15:04:05", "2023-01-01 12:00:00", time.Local)
+t.Unix() // 返回时间戳，单位为秒
+
+// 时间操作
+time.Now().Add(time.Hour) // 加 1 小时
+
+// 等待
+time.Sleep(time.Second)            // 等待 1 秒
+time.Sleep(time.Second * 2)        // 等待 2 秒
+
+// 定时器
+ticker := time.NewTicker(time.Second) // 创建一个 1 秒的定时器
+ticker.C // 返回一个通道，用于接收定时器的事件
+
+for t := range ticker.C {
+    fmt.Println("定时器触发", t) // 每 1 秒打印一次
+}
+
+ticker.Stop() // 停止定时器
+
+```
