@@ -150,64 +150,6 @@ appendToSlice(&nums, 4)
 fmt.Println(nums)  // 输出：[1, 2, 3, 4]
 ```
 
-## 指针与结构体
-
-```go
-type Person struct {
-    Name string
-    Age  int
-}
-
-// 创建结构体指针
-p1 := &Person{Name: "张三", Age: 25}
-
-// 通过指针访问结构体字段
-// Go 自动解引用，p1.Name 等价于 (*p1).Name
-fmt.Println(p1.Name)  // 输出：张三
-fmt.Println((*p1).Name)  // 同上，输出：张三
-
-// 通过指针修改结构体字段
-p1.Age = 26
-fmt.Println(p1.Age)  // 输出：26
-```
-
-### 方法接收者：值接收者 vs 指针接收者
-
-```go
-type Rectangle struct {
-    Width  float64
-    Height float64
-}
-
-// 值接收者：不修改原对象
-func (r Rectangle) Area() float64 {
-    return r.Width * r.Height
-}
-
-// 指针接收者：可以修改原对象
-func (r *Rectangle) Scale(factor float64) {
-    r.Width *= factor
-    r.Height *= factor
-}
-
-rect := Rectangle{Width: 10, Height: 5}
-fmt.Println(rect.Area())  // 输出：50
-
-rect.Scale(2)
-fmt.Println(rect.Width)   // 输出：20
-fmt.Println(rect.Height)  // 输出：10
-```
-
-**选择值接收者还是指针接收者？**
-
-| 场景 | 建议 |
-|-----|------|
-| 需要修改接收者的状态 | 指针接收者 |
-| 结构体较大（避免拷贝开销） | 指针接收者 |
-| 小型结构体（如 Point） | 值接收者 |
-| 方法不修改接收者 | 值或指针均可，保持一致性 |
-| 包含 sync.Mutex 等不可拷贝字段 | 指针接收者 |
-
 ## nil 指针与安全检查
 
 ```go
