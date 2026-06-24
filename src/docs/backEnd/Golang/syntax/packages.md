@@ -29,108 +29,72 @@ func main() {
 
 普通包用于组织可复用的代码，编译后生成 `.a` 归档文件，供其他包导入使用。包名通常与目录名一致。
 
-```go
-// 位于 mylib/math.go 文件中
-package mylib
+```go.mod
+module myproject
 
-// Add 导出函数，供其他包使用
+go 1.26.4
+```
+
+```go
+// 位于 math/math.go 文件中
+package math
+
+// Add 大写开头为导出函数，供其他包使用
 func Add(a, b int) int {
     return a + b
 }
 
-// helper 未导出函数，仅包内可见
+// helper 小写开头为未导出函数，仅包内可见
 func helper() {
     // 内部逻辑
 }
 ```
 
-## 入口函数
-
-`main` 包中必须定义一个 `main` 函数，它是程序的执行入口。
-
 ```go
-package main
-
-import "fmt"
-
-// main 函数是程序的入口点
-// 无参数，无返回值
-func main() {
-    fmt.Println("程序开始执行")
-
-    // 程序逻辑
-    // main 函数执行完毕后，程序自动退出
-}
-```
-
-**入口函数的特点：**
-
-- `main` 函数不能有参数
-- `main` 函数不能有返回值
-- 每个 `main` 包只能有一个 `main` 函数
-- `main` 函数执行完毕后，程序自动终止
-- 可以通过 `os.Exit(code)` 手动设置退出状态码
-
-```go
+// 位于main.go文件中
 package main
 
 import (
     "fmt"
-    "os"
+    M "myproject/math" // 把math包定义别名为 M
 )
 
 func main() {
-    err := run()
-    if err != nil {
-        fmt.Println("程序出错:", err)
-        os.Exit(1)  // 以状态码 1 退出，表示异常
-    }
-    os.Exit(0)  // 以状态码 0 退出，表示正常
-}
-
-func run() error {
-    // 实际业务逻辑
-    return nil
+    fmt.Println("Hello, World!")
+    fmt.Println(math.Add(1, 2)) // 输出：3
+    fmt.Println(M.Add(1, 2)) // 输出：3
 }
 ```
 
-## init 函数
+## 包管理工具
 
-每个包可以包含一个或多个 `init` 函数，它们在包初始化时自动执行，无需手动调用。
+Go 提供了 `go mod` 命令来管理项目的依赖。
+
+- `go mod init`：初始化一个新的模块，设置模块名和版本。类似于`npm init`。
+- `go mod tidy`：根据当前依赖关系更新模块的版本。类似于`npm install`。
+- `go get`：主动安装 指定包及其依赖。类似于`npm install <package>`。
+
+```bash
+go mod init myproject # 初始化模块
+```
+
+## 使用第三方包
+
+[查找常见第三方包](https://pkg.go.dev/)
+
+**1. 使用 `go get` 安装第三方包**
+
+```bash
+go get github.com/username/package-name
+```
+
+**2. 导入第三方包到代码中**
 
 ```go
-package main
-
-import "fmt"
-
-// init 函数在 main 函数之前自动执行
-// 常用于初始化配置、注册组件等
-func init() {
-    fmt.Println("包初始化")
-}
-
-// 可以有多个 init 函数，按声明顺序执行
-func init() {
-    fmt.Println("第二个 init")
-}
-
-func main() {
-    fmt.Println("main 函数执行")
-}
-
-// 输出顺序：
-// 包初始化
-// 第二个 init
-// main 函数执行
+import (
+    "github.com/username/package-name"
+)
 ```
-
-**init 函数的特点：**
-
-- 无参数，无返回值
-- 不能被显式调用
-- 在每个包导入时自动执行一次
-- 多个 `init` 函数按文件名的字典序执行
-- 常用于全局变量初始化、数据库连接、注册驱动等场景
 
 ## 常用标准库
 
@@ -217,7 +181,7 @@ file, err := os.OpenFile("test.txt", os.O_APPEND|os.O_WRONLY, 0644)
 import "time"
 
 // 获取当前日期时间
-time.Now()          
+time.Now()
 
 // 时间格式化
 // 通过使用 Go 的诞生时间2006年1月2日 15时04分05秒 （速记：2026 1 2 3 4 5）
@@ -254,4 +218,154 @@ for t := range ticker.C {
 
 ticker.Stop() // 停止定时器
 
+```
+
+## init 函数
+
+每个包可以包含一个或多个 `init` 函数，它们在包初始化时自动执行，无需手动调用。
+
+嵌套导入多个包时 `init` 的执行顺序遵循以下规则：
+
+**执行顺序规则：**
+
+1. 被导入的包的 `init` 函数先执行
+2. 同一文件中的多个 `init` 按出现顺序执行
+3. 同一包内不同文件的 `init` 按文件名排序执行
+4. 深层嵌套依赖最先执行
+
+**示例说明：**
+
+```go
+// 假设有如下导入关系：
+// main -> pkgA -> pkgB -> pkgC
+
+// 执行顺序：
+// 1. pkgC.init()
+// 2. pkgB.init()
+// 3. pkgA.init()
+// 4. main.init()
+// 5. main.main()
+```
+
+**具体示例代码：**
+
+```go
+// pkgC.go
+package pkgC
+
+import "fmt"
+
+func init() {
+    fmt.Println("pkgC init")
+}
+
+// pkgB.go
+package pkgB
+
+import (
+    "fmt"
+    "pkgC"
+)
+
+func init() {
+    fmt.Println("pkgB init")
+}
+
+// pkgA.go
+package pkgA
+
+import (
+    "fmt"
+    "pkgB"
+)
+
+func init() {
+    fmt.Println("pkgA init")
+}
+
+// main.go
+package main
+
+import (
+    "fmt"
+    "pkgA"
+)
+
+func init() {
+    fmt.Println("main init")
+}
+
+func main() {
+    fmt.Println("main function")
+}
+
+// 输出顺序：
+// pkgC init
+// pkgB init
+// pkgA init
+// main init
+// main function
+```
+
+**init 函数的特点：**
+
+- 无参数，无返回值
+- 不能被显式调用
+- 同一包无论被导入多少次，`init` 只执行一次
+- 多个 `init` 函数按文件名的字典序执行
+- 常用于全局变量初始化、数据库连接、注册驱动等场景
+
+**注意事项：**
+
+- 不要在 `init` 中做耗时操作，会延长程序启动时间
+- 避免在 `init` 中依赖不确定顺序的外部状态
+
+## 入口函数
+
+`main` 包中必须定义一个 `main` 函数，它是程序的执行入口。
+
+```go
+package main
+
+import "fmt"
+
+// main 函数是程序的入口点
+// 无参数，无返回值
+func main() {
+    fmt.Println("程序开始执行")
+
+    // 程序逻辑
+    // main 函数执行完毕后，程序自动退出
+}
+```
+
+**入口函数的特点：**
+
+- `main` 函数不能有参数
+- `main` 函数不能有返回值
+- 每个 `main` 包只能有一个 `main` 函数
+- `main` 函数执行完毕后，程序自动终止
+- 可以通过 `os.Exit(code)` 手动设置退出状态码
+
+```go
+package main
+
+import (
+    "fmt"
+    "os"
+)
+
+func main() {
+    err := run()
+    if err != nil {
+        fmt.Println("程序出错:", err)
+        os.Exit(1)  // 以状态码 1 退出，表示异常
+    }
+    os.Exit(0)  // 以状态码 0 退出，表示正常
+}
+
+func run() error {
+    // 实际业务逻辑
+    return nil
+}
 ```
