@@ -5,85 +5,6 @@ order: 1
 
 # Go 语法基础
 
-## 接口（Interface）
-
-```go
-// 定义接口
-type Animal interface {
-    Speak() string
-    Move() string
-}
-
-// 实现接口
-type Dog struct {
-    Name string
-}
-
-func (d Dog) Speak() string {
-    return "汪汪"
-}
-
-func (d Dog) Move() string {
-    return "跑"
-}
-
-type Cat struct {
-    Name string
-}
-
-func (c Cat) Speak() string {
-    return "喵喵"
-}
-
-func (c Cat) Move() string {
-    return "走"
-}
-
-// 使用接口
-func makeSound(a Animal) {
-    fmt.Println(a.Speak())
-}
-
-dog := Dog{Name: "旺财"}
-cat := Cat{Name: "咪咪"}
-
-makeSound(dog)  // 输出：汪汪
-makeSound(cat)  // 输出：喵喵
-```
-
-### 空接口
-
-```go
-// 空接口可以接受任何类型
-var anything interface{}
-
-anything = 42
-anything = "hello"
-anything = true
-
-// 类型断言
-value := anything.(string)
-
-// 类型断言检查
-if str, ok := anything.(string); ok {
-    fmt.Println("是字符串:", str)
-}
-
-// 类型选择
-func describe(i interface{}) {
-    switch v := i.(type) {
-    case int:
-        fmt.Printf("整数: %d\n", v)
-    case string:
-        fmt.Printf("字符串: %s\n", v)
-    case bool:
-        fmt.Printf("布尔值: %t\n", v)
-    default:
-        fmt.Printf("未知类型: %T\n", v)
-    }
-}
-```
-
 ## 错误处理
 
 ```go
@@ -125,7 +46,7 @@ func doSomething() error {
 
  
 ## 并发编程
-
+ 
 ### Goroutine
 
 ```go
@@ -218,51 +139,6 @@ func main() {
 }
 ```
 
-## 包管理
-
-### 导入包
-
-```go
-import (
-    "fmt"
-    "os"
-    "strings"
-)
-
-// 别名导入
-import (
-    f "fmt"
-    myos "os"
-)
-
-// 点导入（不推荐）
-import . "fmt"
-
-// 空白导入（只执行 init）
-import _ "database/sql/driver"
-```
-
-### 创建包
-
-```go
-// mypackage/math.go
-package mypackage
-
-// 导出（首字母大写）
-func Add(a, b int) int {
-    return a + b
-}
-
-// 未导出（首字母小写，包外不可见）
-func internalHelper() {
-    // ...
-}
-
-// init 函数（包加载时自动执行）
-func init() {
-    fmt.Println("mypackage 已加载")
-}
-```
 
 | 序号 | 中文标题 | 英文命名建议 |
 |-----|---------|-------------|
