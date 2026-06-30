@@ -10,7 +10,6 @@ order: 7
 **进程（Process）**：一个正在独立运行的程序实例
 **线程（Thread）**：进程内的执行单位，共享进程资源
 
-
 ## 并发 vs 并行
 
 **并发（Concurrency）**：多个任务作用在一个CPU上，同一时间点只能有一个任务在执行，在同一时间段内处理多个任务，交替执行
@@ -66,77 +65,37 @@ go func() {
 
 ### Goroutine 的特点
 
-| 特性 | 说明 |
-|-----|------|
-| **轻量级** | 初始栈大小约 2KB，可动态扩展 |
-| **调度** | 由 Go 运行时调度，非操作系统线程 |
-| **启动开销** | 远小于线程 |
-| **数量** | 单个程序可创建数万甚至数十万 |
-
-
-
-### GMP 调度模型
-
-Go 使用 GMP 调度模型管理 Goroutine：
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                       Go Runtime                            │
-├─────────────────────────────────────────────────────────────┤
-│  G (Goroutine): 协程，包含执行栈和程序计数器                 │
-│  M (Machine): 操作系统线程                                   │
-│  P (Processor): 处理器，包含运行队列和上下文                 │
-├─────────────────────────────────────────────────────────────┤
-│  M1 ── P1 ── G1    G2    G3    ...    (本地运行队列)        │
-│  M2 ── P2 ── G4    G5    G6    ...    (本地运行队列)        │
-│  ...                                                        │
-│  全局运行队列: G100  G101  G102  ...                         │
-└─────────────────────────────────────────────────────────────┘
-```
-
-**调度策略：**
-
-1. **Work Stealing**：空闲的 P 可以从其他 P 的队列中"偷"任务
-2. **Global Queue**：当本地队列为空时，从全局队列获取任务
-3. **Context Switch**：Goroutine 间切换开销极低
-
-### 等待 Goroutine 完成
-
-```go
-func main() {
-    var wg sync.WaitGroup
-
-    for i := 0; i < 3; i++ {
-        wg.Add(1)
-        go func(id int) {
-            defer wg.Done()
-            fmt.Printf("Goroutine %d 完成\n", id)
-        }(i)
-    }
-
-    wg.Wait()
-    fmt.Println("所有 Goroutine 完成")
-}
-```
+| 特性         | 说明                             |
+| ------------ | -------------------------------- |
+| **轻量级**   | 初始栈大小约 2KB，可动态扩展     |
+| **调度**     | 由 Go 运行时调度，非操作系统线程 |
+| **启动开销** | 远小于线程                       |
+| **数量**     | 单个程序可创建数万甚至数十万     |
 
 ## Channel（通道）
 
-Channel 是 Goroutine 间通信的管道，用于传递数据。
+Channel 是 Goroutine 间通信的管道，用于传递数据。数据传输遵循 FIFO（先进先出）原则。
 
 ```go
-// 创建无缓冲通道
+// 创建无缓冲的传递整型数据的通道
 ch := make(chan int)
 
 // 发送数据
-ch <- 42
+ch <- 42 // 把42发送到通道ch
 
 // 接收数据
-value := <-ch
+value := <-ch // 从通道ch接收数据，返回值为int类型，value为42
+fmt.Println(value) // 输出42
 
-// 创建带缓冲通道
+// 创建带缓冲的传递整型数据的通道，缓冲区大小为10个整型数据
 bufferedCh := make(chan int, 10)
 bufferedCh <- 1
 bufferedCh <- 2
+
+// 接收数据
+<-bufferedCh // 从通道bufferedCh接收数据，但忽略返回值（1）
+value1 := <-bufferedCh // 从通道bufferedCh接收数据，返回值为int类型，value1为2
+fmt.Println(value1) // 输出2
 
 // 关闭通道
 close(ch)
@@ -150,12 +109,12 @@ if !ok {
 
 ### 通道类型
 
-| 类型 | 创建方式 | 特点 |
-|-----|---------|------|
-| **无缓冲** | `make(chan T)` | 发送和接收必须同时准备好 |
+| 类型       | 创建方式          | 特点                             |
+| ---------- | ----------------- | -------------------------------- |
+| **无缓冲** | `make(chan T)`    | 发送和接收必须同时准备好         |
 | **有缓冲** | `make(chan T, n)` | 缓冲区满时阻塞发送，空时阻塞接收 |
-| **只读** | `<-chan T` | 只能接收数据 |
-| **只写** | `chan<- T` | 只能发送数据 |
+| **只读**   | `<-chan T`        | 只能接收数据                     |
+| **只写**   | `chan<- T`        | 只能发送数据                     |
 
 ### 方向通道
 
@@ -180,7 +139,10 @@ func main() {
 }
 ```
 
-### 关闭通道
+### 循环遍历通道
+
+使用for range遍历通道时，必须先关闭通道，当通道被关闭时才会自动退出for range循环，如果没有关闭通道就会报错死锁。
+使用for循环遍历通道时，可以不关闭通道。
 
 ```go
 ch := make(chan int)
@@ -189,11 +151,17 @@ go func() {
     for i := 0; i < 5; i++ {
         ch <- i
     }
-    close(ch)
+    close(ch) // 关闭通道
 }()
 
+// for range 遍历通道的值，通道没有key
 for value := range ch {
     fmt.Println(value)
+}
+
+// for 循环遍历通道的值，通道没有key
+for i := 0; i < 5; i++ {
+    fmt.Println(i, <-ch)
 }
 ```
 
@@ -202,6 +170,89 @@ for value := range ch {
 - 向已关闭的通道发送数据会 panic
 - 从已关闭的通道接收数据返回零值和 `false`
 - 通道只能关闭一次
+
+### 通道阻塞
+
+**无缓冲通道阻塞：**
+
+无缓冲通道要求发送和接收**同时准备好**，否则会阻塞。
+
+```go
+// ❌ 会死锁：主 Goroutine 发送数据，但没有接收方
+func main() {
+    ch := make(chan int)
+    ch <- 1  // 永远阻塞在这里
+}
+
+// ✅ 正确：使用 Goroutine 接收
+func main() {
+    ch := make(chan int)
+    go func() {
+        <-ch
+    }()
+    ch <- 1
+}
+```
+
+**有缓冲通道阻塞：**
+
+```go
+ch := make(chan int, 2)  // 缓冲区大小为 2
+
+// 前 2 次发送不会阻塞
+ch <- 1
+ch <- 2
+
+// 第 3 次发送会阻塞（缓冲区已满）
+ch <- 3  // 阻塞，直到有接收者取出数据
+```
+
+**阻塞场景总结：**
+
+| 通道类型 | 阻塞条件                               |
+| -------- | -------------------------------------- |
+| 无缓冲   | 发送时无接收方，或接收时无发送方       |
+| 有缓冲   | 缓冲区满时发送阻塞，缓冲区空时接收阻塞 |
+
+**避免死锁：**
+
+```go
+// ❌ 死锁：等待自己
+func main() {
+    ch := make(chan int)
+    <-ch  // 永远阻塞，没有发送方
+}
+
+// ❌ 死锁：多个 Goroutine 相互等待
+func main() {
+    ch1 := make(chan int)
+    ch2 := make(chan int)
+
+    go func() {
+        ch1 <- <-ch2  // 等待 ch2
+    }()
+    ch2 <- <-ch1  // 等待 ch1
+}
+
+// ✅ 正确：确保有对应的发送/接收
+func main() {
+    ch := make(chan int)
+    go func() {
+        ch <- 1
+    }()
+    <-ch
+}
+```
+
+**检测死锁：**
+
+运行时检测到死锁会 panic：
+
+```go
+ch := make(chan int)
+<-ch
+// fatal error: all goroutines are asleep - deadlock!
+```
 
 ## Select 多路复用
 
@@ -294,20 +345,22 @@ func write(key, value string) {
 
 ### sync.WaitGroup
 
+当主线程运行结束后，会立刻终止所有 Goroutine。为确保所有 Goroutine 都执行完成，可以使用 `sync.WaitGroup` 等待所有 Goroutine 完成。
+
 ```go
 func main() {
     var wg sync.WaitGroup
 
-    for i := 0; i < 5; i++ {
-        wg.Add(1)
+    for i := 0; i < 3; i++ {
+        wg.Add(1) // 协程计数器加1
         go func(id int) {
-            defer wg.Done()
-            fmt.Printf("Task %d done\n", id)
+            defer wg.Done() // 协程计数器减1
+            fmt.Printf("Goroutine %d 完成\n", id)
         }(i)
     }
 
-    wg.Wait()
-    fmt.Println("All tasks done")
+    wg.Wait() // 等待所有 Goroutine 完成
+    fmt.Println("所有 Goroutine 完成")
 }
 ```
 
@@ -359,7 +412,7 @@ var pool = sync.Pool{
 func process() {
     buf := pool.Get().([]byte)
     defer pool.Put(buf)
-    
+
     // 使用 buf
 }
 ```
@@ -633,12 +686,12 @@ go run -race main.go
 
 ### 解决方案
 
-| 方案 | 适用场景 |
-|-----|---------|
-| **Mutex** | 任意场景 |
-| **Channel** | 生产者-消费者模式 |
-| **sync.Map** | 并发读写 Map |
-| **原子操作** | 简单的数值操作 |
+| 方案         | 适用场景          |
+| ------------ | ----------------- |
+| **Mutex**    | 任意场景          |
+| **Channel**  | 生产者-消费者模式 |
+| **sync.Map** | 并发读写 Map      |
+| **原子操作** | 简单的数值操作    |
 
 ```go
 // ✅ 使用 Mutex
@@ -708,3 +761,160 @@ func increment() {
 3. **没有等待 Goroutine 完成**：主程序提前退出
 4. **共享数据不加保护**：导致竞态条件
 5. **过度使用 Mutex**：影响性能，考虑使用 Channel
+
+## 例子
+
+**1. 统计1-12000的数字中哪些是素数，并同时打印出来，要求结合Goroutine、Channel并开启8线程执行**
+
+```go
+package main
+
+import (
+	"fmt"
+	"sync"
+)
+
+// isPrime 判断一个数是否为素数
+// 素数定义：大于1的自然数，除了1和它本身外没有其他因数
+func isPrime(n int) bool {
+	if n <= 1 {
+		return false
+	}
+	if n == 2 {
+		return true
+	}
+	if n%2 == 0 {
+		return false
+	}
+	// 只需要检查到 sqrt(n)，因为如果 n 有因子，必然有一个因子 <= sqrt(n)
+	for i := 3; i*i <= n; i += 2 {
+		if n%i == 0 {
+			return false
+		}
+	}
+	return true
+}
+
+// worker 工作函数，从 tasks channel 获取数字，判断是否为素数，将结果发送到 results channel
+// wg 用于通知主 goroutine 该 worker 已完成
+func worker(id int, tasks <-chan int, results chan<- int, wg *sync.WaitGroup) {
+	// 函数结束时通知 WaitGroup 减少计数
+	defer wg.Done()
+
+	// for range 遍历 tasks channel，当 channel 关闭时自动退出循环
+	for num := range tasks {
+		if isPrime(num) {
+			// 将素数发送到 results channel
+			results <- num
+		}
+	}
+}
+
+func main() {
+	const (
+		workerCount = 8      // 开启的 goroutine 数量
+		maxNum      = 12000  // 需要检查的最大数字
+	)
+
+	// 创建 tasks channel，用于分发待检查的数字
+	// 缓冲区大小设为 100，避免生产者发送数据时短暂阻塞
+	tasks := make(chan int, 100)
+
+	// 创建 results channel，用于收集素数结果
+	// 缓冲区大小设为 100，不再需要预测素数数量，因为打印 goroutine 会实时消费
+	results := make(chan int, 100)
+
+	// 创建 WaitGroup，用于等待所有 worker 完成
+	var wg sync.WaitGroup
+
+	// 创建 printerWg，用于等待打印 goroutine 完成
+	var printerWg sync.WaitGroup
+
+	// 启动 8 个 worker goroutine
+	for i := 1; i <= workerCount; i++ {
+		wg.Add(1) // 每启动一个 worker，增加 WaitGroup 计数
+		go worker(i, tasks, results, &wg)
+	}
+
+	// 启动任务分发 goroutine
+	// 将任务分发放到单独的 goroutine 中，是避免死锁的关键：
+	// 如果主 goroutine 先分发所有任务再读取 results，
+	// 当 results 缓冲区满时，worker 会阻塞在发送，导致无人接收 tasks，
+	// 主 goroutine 阻塞在发送 tasks，形成死锁。
+	go func() {
+		for num := 1; num <= maxNum; num++ {
+			tasks <- num
+		}
+		close(tasks) // 所有任务分发完成后关闭 tasks channel
+		fmt.Println("任务分发完成，已关闭 tasks channel")
+	}()
+
+	// 素数计数器，在 main 函数作用域声明
+	// 打印 goroutine 写入，主 goroutine 在 printerWg.Wait() 之后读取
+	// 由于 printerWg.Wait() 保证了 happens-before 关系，所以没有竞态条件
+	var count int
+
+	// 启动打印 goroutine，负责实时读取 results channel 并打印
+	printerWg.Add(1)
+	go func() {
+		defer printerWg.Done()
+		fmt.Println("开始实时打印素数结果...")
+		for prime := range results {
+			fmt.Printf("%5d", prime)
+			count++
+			if count%10 == 0 {
+				fmt.Println()
+			}
+		}
+	}()
+
+	// 主 goroutine 职责：
+	// 1. 等待所有 worker 完成
+	// 2. 关闭 results channel（通知打印 goroutine 没有更多数据）
+	// 3. 等待打印 goroutine 完成
+	// 4. 打印最终统计
+	wg.Wait()
+	close(results)
+	fmt.Println("所有 worker 已完成，已关闭 results channel")
+
+	printerWg.Wait()
+
+	// 打印最终统计
+	fmt.Printf("\n\n===== 统计完成 =====\n")
+	fmt.Printf("1-%d 中共有 %d 个素数\n", maxNum, count)
+}
+```
+
+**代码说明：**
+
+1. **Worker Pool 模式**：这是一种经典的并发模式，适用于任务量较大且可以并行处理的场景
+
+2. **Channel 作用**：
+   - `tasks`：分发 goroutine 向 worker 分发待检查的数字
+   - `results`：worker 将找到的素数发送到打印 goroutine
+
+3. **四条并行执行线**：
+   - **分发 goroutine**：负责将 1-12000 的数字发送到 `tasks` channel，完成后关闭 channel
+   - **8 个 worker goroutine**：从 `tasks` channel 获取数字，判断是否为素数，将结果发送到 `results` channel
+   - **打印 goroutine**：实时从 `results` channel 读取数据并打印，同时计数
+   - **主 goroutine**：协调各 goroutine，最后打印统计结果
+
+4. **两个 WaitGroup**：
+   - `wg`：等待所有 worker 完成
+   - `printerWg`：等待打印 goroutine 完成
+
+5. **主 goroutine 职责**：
+   - `wg.Wait()`：等待所有 worker 完成
+   - `close(results)`：关闭 results channel，通知打印 goroutine 没有更多数据
+   - `printerWg.Wait()`：等待打印 goroutine 完成所有打印
+   - 打印最终统计结果
+
+6. **实时打印**：打印 goroutine 使用 `for range` 遍历 `results` channel，每收到一个素数就立即打印，不需要等待所有结果
+
+7. **死锁避免**：
+   - **任务分发放到单独 goroutine**：这是最关键的设计。如果主 goroutine 先分发所有任务再读取 results，当 results 缓冲区满时，worker 会阻塞在发送，导致无人接收 tasks，主 goroutine 阻塞在发送 tasks，形成死锁
+   - **主 goroutine 负责关闭 results**：由于主 goroutine 不再读取 results，它可以直接执行 `wg.Wait()` + `close(results)`，不再需要单独的 goroutine 来做这件事
+
+8. **并发安全**：`count` 变量虽然在打印 goroutine 中写入、主 goroutine 中读取，但由于 `printerWg.Wait()` 保证了 happens-before 关系，所以没有竞态条件
+
+9. **缓冲区设计**：两个 channel 的缓冲区都设为 100，不再需要预测素数数量，因为打印 goroutine 会实时消费 results，不会出现缓冲区溢出的情况
