@@ -167,13 +167,46 @@ os.Chdir("/path/to/dir")            // 切换目录
 os.Mkdir("newdir", 0755)            // 创建目录
 os.MkdirAll("a/b/c", 0755)          // 递归创建目录
 os.Remove("file.txt")               // 删除文件
-os.RemoveAll("dir")                 // 递归删除
+os.Remove("dir")                    // 删除目录
+os.RemoveAll("dir1/dir2")                 // 递归删除目录和文件
+
 
 // 文件操作
 file, err := os.Create("test.txt")
-file, err := os.Open("test.txt")
-file, err := os.OpenFile("test.txt", os.O_APPEND|os.O_WRONLY, 0644)
+file, err := os.Open("test.txt") // 只读打开文件
+
+defer file.Close() // 操作完成后必须关闭文件流
+
+content, err := file.ReadAll() // 读取文件内容，返回字节切片
+str := string(content) // 转换为字符串
+
+file, err := os.OpenFile("test.txt", os.O_APPEND|os.O_WRONLY, 0644) // 追加写入
+file.WriteString("hello world") // 写入字符串
+
+// 复制文件
+srcFile, err := os.Open("testA.txt")
+dstFile, err := os.Create("testB.txt")
+io.Copy(dstFile, srcFile)
+
+// 重命名文件
+os.Rename("testB.txt", "testC.txt") // 把 testB.txt 重命名为 testC.txt
+
 ```
+
+#### os打开文件模式与权限
+
+- `os.O_RDONLY`：只读打开文件
+- `os.O_WRONLY`：只写打开文件
+- `os.O_RDWR`：读写打开文件
+- `os.O_APPEND`：追加写入文件
+- `os.O_CREATE`：创建文件
+- `os.O_TRUNC`：截断（清空）文件内容
+
+文件权限：一个八进制数，r（读取）04、w（写入）02、wx（执行）01 三者中的任意组合。
+
+- 0644：读取、写入、执行（所有者、组用户、其他用户）
+- 0755：读取、写入、执行（所有者、组用户、其他用户）
+- 0777：读取、写入、执行（所有者、组用户、其他用户）
 
 ### time 包
 
