@@ -460,4 +460,153 @@ func getUser(id int) (*User, error) {
 - 被 recover 捕获后，程序从 defer 所在函数返回，不会回到 panic 发生的位置
 - 生产环境中应谨慎使用 panic/recover，优先使用 error 处理
 
+## Goroutine Recover 解决协程中出现的 panic 问题
 
+### 为什么需要在 goroutine 中使用 recover
+
+在 Go 中，**一个 goroutine 的 panic 如果没有被 recover，会导致整个程序崩溃**：
+
+```go
+func main() {
+    go func() {
+        panic("goroutine 崩溃")  // 没有 recover，整个程序崩溃
+    }()
+
+    fmt.Println("主程序继续执行...")
+    time.Sleep(1 * time.Second)
+}
+```
+
+输出：
+```
+主程序继续执行...
+panic: goroutine 崩溃
+
+goroutine 6 [running]:
+...
+exit status 2
+```
+
+### goroutine 的 panic 不会影响其他 goroutine
+
+关键点：一个 goroutine 的 panic **不会自动传播**到其他 goroutine，但会导致整个进程退出：
+
+```go
+func main() {
+    // goroutine 1：会 panic
+    go func() {
+        time.Sleep(200 * time.Millisecond)
+        panic("goroutine 1 崩溃")
+    }()
+
+    // goroutine 2：正常执行
+    go func() {
+        for i := 0; i < 5; i++ {
+            fmt.Println("goroutine 2:", i)
+            time.Sleep(100 * time.Millisecond)
+        }
+    }()
+
+    fmt.Println("主程序运行中...")
+    time.Sleep(1 * time.Second)
+}
+```
+
+输出（goroutine 2 会先执行几次，然后程序崩溃）：
+```
+主程序运行中...
+goroutine 2: 0
+goroutine 2: 1
+panic: goroutine 1 崩溃
+...
+exit status 2
+```
+
+### 在 goroutine 中使用 recover
+
+正确的做法是在 goroutine 中使用 `defer` + `recover` 捕获 panic：
+
+```go
+func main() {
+    go func() {
+        defer func() {
+            if err := recover(); err != nil {
+                fmt.Printf("捕获到 panic: %v\n", err)
+                // 可以在这里记录日志、清理资源等
+            }
+        }()
+
+        panic("goroutine 崩溃")
+    }()
+
+    fmt.Println("主程序继续执行...")
+    time.Sleep(1 * time.Second)
+}
+```
+
+输出：
+```
+主程序继续执行...
+捕获到 panic: goroutine 崩溃
+```
+
+### 实用模式：包装函数统一处理 panic
+
+在实际项目中，通常会定义一个包装函数来统一处理 goroutine 的 panic：
+
+```go
+// goroutineWrapper 包装函数，统一处理 goroutine 中的 panic
+func goroutineWrapper(f func()) {
+    defer func() {
+        if err := recover(); err != nil {
+            fmt.Printf("goroutine panic: %v\n", err)
+            // 记录日志
+            // log.Printf("goroutine panic: %v\n%s", err, debug.Stack())
+        }
+    }()
+    f()
+}
+
+func main() {
+    // 使用包装函数启动 goroutine
+    goroutineWrapper(func() {
+        panic("测试 panic")
+    })
+
+    goroutineWrapper(func() {
+        fmt.Println("正常执行")
+    })
+
+    time.Sleep(1 * time.Second)
+}
+```
+
+### 结合 Worker Pool 使用
+
+在之前的素数统计示例中，可以为每个 worker 添加 panic 保护：
+
+```go
+func worker(id int, tasks <-chan int, results chan<- int, wg *sync.WaitGroup) {
+    defer func() {
+        if err := recover(); err != nil {
+            fmt.Printf("Worker %d panic: %v\n", id, err)
+        }
+        wg.Done()  // 确保即使 panic 也会调用 Done()
+    }()
+
+    for num := range tasks {
+        if isPrime(num) {
+            results <- num
+        }
+    }
+}
+```
+
+### 注意事项
+
+1. **recover 必须在同一个 goroutine 中调用**：不能在主 goroutine 中 recover 子 goroutine 的 panic
+2. **defer 必须在 panic 之前注册**：如果 defer 在 panic 之后才注册，无法捕获
+3. **recover 只在 defer 函数中有效**：直接调用 recover() 不会有任何效果
+4. **panic 会中断 defer 的执行**：如果 defer 中又发生 panic，会覆盖之前的 panic
+5. **不要滥用 recover**：生产环境中应优先使用 error 处理，只在必要时使用 panic/recover
+6. **确保资源正确释放**：即使 panic，也要确保打开的文件、网络连接等资源被正确关闭

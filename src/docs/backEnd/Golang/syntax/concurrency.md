@@ -305,22 +305,44 @@ ch := make(chan int)
 
 ## Select 多路复用
 
-### 基本用法
+**使用场景：** 同时处理多个 channel 上的数据，每个 channel 上的数据到达时间不同。
+
+**工作机制：**
+
+1. **同时监听多个 channel**：`select` 会同时检查所有 case 中的 channel 操作
+2. **阻塞等待**：如果所有 channel 都没有数据且没有 `default`，`select` 会阻塞
+3. **随机选择**：当多个 case 同时就绪时，Go 运行时会随机选择一个执行（避免饥饿）
+4. **一次性执行**：`select` 只会执行一个 case，执行完就退出（除非放在循环中）
 
 ```go
 func main() {
     ch1 := make(chan int)
     ch2 := make(chan int)
 
-    go func() { ch1 <- 1 }()
-    go func() { ch2 <- 2 }()
+    go func() {
+        for i := 0; i < 2; i++ {
+            ch1 <- i
+        }
+    }()
 
-    for i := 0; i < 2; i++ {
+    go func() {
+        for i := 10; i < 2; i++ {
+            ch2 <- i
+        }
+    }()
+
+    for {
+        // 多路复用，先收到数据的 channel 会执行对应的 case
         select {
         case v := <-ch1:
             fmt.Println("从 ch1 收到:", v)
         case v := <-ch2:
             fmt.Println("从 ch2 收到:", v)
+        default:
+            // `default` 分支在所有 channel 都没有就绪时执行，用于非阻塞操作
+            // `default` 会使 `select` 变为非阻塞模式，如果所有 channel 都没有就绪，会立即执行 `default`
+            fmt.Println("无数据")
+            return // 退出循环
         }
     }
 }
@@ -341,20 +363,86 @@ func main() {
 }
 ```
 
-### Default 分支
+### 发送操作在 Select 中的使用
+
+`select` 不仅可以接收数据，也可以发送数据：
 
 ```go
 func main() {
-    ch := make(chan int)
+    ch := make(chan int, 1)
 
+    go func() {
+        select {
+        case ch <- 1:
+            fmt.Println("发送成功")
+        case <-time.After(500 * time.Millisecond):
+            fmt.Println("发送超时")
+        }
+    }()
+
+    // 接收数据
+    fmt.Println("收到:", <-ch)
+}
+```
+
+### 是否关闭 channel
+
+**select 单次使用 ：**不需要关闭 channel，执行完一个 case 就退出
+
+```go
+ch := make(chan int)
+
+go func() {
+    ch <- 1
+    // 不需要 close(ch)
+}()
+
+select {
+case v := <-ch:
+    fmt.Println(v)  // 收到 1 后，select 立即退出
+case <-time.After(1 * time.Second):
+    fmt.Println("超时")
+}
+```
+
+**select + for 循环 ：**需要关闭 channel，否则循环无法退出
+
+```go
+ch := make(chan int)
+
+go func() {
+    for i := 0; i < 3; i++ {
+        ch <- i
+    }
+    close(ch)  // 需要关闭，否则循环会一直等待
+}()
+
+for {
     select {
-    case v := <-ch:
-        fmt.Println("收到:", v)
-    default:
-        fmt.Println("无数据")
+    case v, ok := <-ch:
+        if !ok {
+            return  // channel 关闭，退出循环
+        }
+        fmt.Println(v)
     }
 }
 ```
+
+关闭 channel 的真正目的是 通知接收方"没有更多数据了" ，而 select 单次执行不需要这个通知。
+
+### 常见使用场景
+
+1. **超时控制**：避免无限期等待某个 channel
+2. **优雅退出**：监听退出信号 channel
+3. **负载均衡**：多个 worker 同时竞争任务
+4. **心跳检测**：定期检查连接状态
+
+### 注意事项
+
+- **空 select**：`select{}` 会导致 goroutine 永久阻塞
+- **nil channel**：对 nil channel 的操作永远不会就绪
+- **随机选择**：多个 case 同时就绪时，选择是随机的，不是按顺序
+- **关闭的 channel**：从关闭的 channel 接收会立即返回零值
 
 ## sync 包
 
@@ -365,27 +453,30 @@ var mu sync.Mutex
 var count int
 
 func increment() {
-    mu.Lock()
-    defer mu.Unlock()
+    mu.Lock() // 加锁
+    defer mu.Unlock() // 解锁
     count++
 }
 ```
 
 ### sync.RWMutex（读写锁）
 
+- **读锁**：多个读操作可以同时进行，互不干扰。
+- **写锁**：只有一个写操作可以同时进行，其他读操作和写操作会阻塞。
+
 ```go
 var rwmu sync.RWMutex
 var data = make(map[string]string)
 
 func read(key string) string {
-    rwmu.RLock()
-    defer rwmu.RUnlock()
+    rwmu.RLock() // 加读锁
+    defer rwmu.RUnlock() // 解读锁
     return data[key]
 }
 
 func write(key, value string) {
-    rwmu.Lock()
-    defer rwmu.Unlock()
+    rwmu.Lock() // 加写锁
+    defer rwmu.Unlock() // 解写锁
     data[key] = value
 }
 ```
