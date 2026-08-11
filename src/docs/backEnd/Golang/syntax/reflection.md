@@ -207,12 +207,11 @@ fmt.Println(p)  // {Bob 25}
 ```go
 type Calculator struct{}
 
-func (c *Calculator) Add(a, b int) int {
-    return a + b
-}
-
 func (c *Calculator) Multiply(a, b int) int {
     return a * b
+}
+func (c *Calculator) Add(a, b int) int {
+    return a + b
 }
 
 func main() {
@@ -220,12 +219,22 @@ func main() {
     v := reflect.ValueOf(c)
 
     // 获取方法
-    method := v.MethodByName("Add")
+    methodNum := v.Type().NumMethod()  // 获取方法数量，这里是2
+    method1 := v.Method(0) // 获取第一个方法，这里是Add（跟结构体方法名称的ASCII码顺序有关）
 
-    // 准备参数
+    method, ok := v.MethodByName("Add")
+    if !ok {
+        fmt.Println("方法不存在")
+        return
+    }
+    fmt.Println(method.Type())  // func(*Calculator) int
+    fmt.Println(method.Name())  // Add
+    fmt.Println(method.NumIn())  // 获取方法的输入参数数量，这里是2
+
+    // 准备参数，args是reflect.Value类型的切片，每个元素对应一个反射对象的参数
     args := []reflect.Value{
-        reflect.ValueOf(10),
-        reflect.ValueOf(20),
+        reflect.ValueOf(10), // 把10转换为reflect.Value类型
+        reflect.ValueOf(20), // 把20转换为reflect.Value类型
     }
 
     // 调用方法
