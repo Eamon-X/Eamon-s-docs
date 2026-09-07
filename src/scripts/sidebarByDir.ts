@@ -6,8 +6,8 @@ import fs from "fs";
  */
 export interface SidebarItem {
   text: string;
-  collapsible?: boolean;
-  collapsed?: boolean;
+  collapsible?: boolean; // 是否可折叠，默认false
+  collapsed?: boolean; // 是否折叠，默认false
   items?: SidebarItem[];
   link?: string;
   order?: number;
