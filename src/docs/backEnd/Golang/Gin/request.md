@@ -125,6 +125,7 @@ r.POST("/login", func(c *gin.Context) {
 |------|----------|------|
 | `ShouldBind` | 通用 | 根据 Content-Type 自动选择绑定方式 |
 | `ShouldBindJSON` | JSON | 绑定 JSON 请求体 |
+| `ShouldBindXML` | XML | 绑定 XML 请求体 |
 | `ShouldBindQuery` | Query | 绑定 URL 查询参数 |
 | `ShouldBindForm` | 表单 | 绑定表单数据 |
 | `ShouldBindUri` | 路径参数 | 绑定 URI 中的路径参数 |
@@ -150,6 +151,84 @@ r.POST("/user", func(c *gin.Context) {
 	}
 
 	c.JSON(200, req)
+})
+```
+
+### XML 绑定
+
+对于 `Content-Type: application/xml` 的请求，使用 `xml` 标签声明字段名，并通过 `ShouldBindXML` 绑定：
+
+```go
+// <Order>
+//   <ID>1001</ID>
+//   <Amount>99.9</Amount>
+//   <Items>
+//     <Item>
+//       <Name>键盘</Name>
+//       <Count>1</Count>
+//     </Item>
+//     <Item>
+//       <Name>鼠标</Name>
+//       <Count>2</Count>
+//     </Item>
+//   </Items>
+// </Order>
+type Item struct {
+	Name  string `xml:"name"`
+	Count int    `xml:"count"`
+}
+
+type OrderRequest struct {
+	ID     int64   `xml:"id" binding:"required"`
+	Amount float64 `xml:"amount"`
+	Items  []Item  `xml:"items>item"` // 嵌套列表
+}
+
+r.POST("/order", func(c *gin.Context) {
+	var req OrderRequest
+
+	// 显式绑定 XML
+	if err := c.ShouldBindXML(&req); err != nil {
+		c.XML(400, gin.H{"message": err.Error()})
+		return
+	}
+
+	c.XML(200, req)
+})
+```
+
+说明：
+
+- 结构体使用 `xml` 标签映射 XML 节点名，字段名匹配不区分大小写
+- 嵌套结构通过 `items>item` 这样的路径写法表示，等价于 `xml:"items item"` 的子节点写法
+- `ShouldBind` 在识别到 `Content-Type: application/xml` 时也会自动走 XML 绑定
+- 响应同样可以使用 `c.XML()` 序列化输出
+
+#### 手动解析 XML
+
+某些场景（如微信支付回调、需要先校验签名的第三方接口）需要先拿到原始数据自行处理，可以结合 `GetRawData` 和 `encoding/xml` 手动解析：
+
+```go
+import "encoding/xml"
+
+r.POST("/callback", func(c *gin.Context) {
+	// 读取原始 XML 数据
+	data, err := c.GetRawData() // 从c.Request.Body读取原始数据，注意：一次性读取，读完即空
+	if err != nil {
+		c.XML(400, gin.H{"message": "读取请求体失败"})
+		return
+	}
+
+	// 可在此处对原始数据做签名校验等处理
+
+	// 手动解析到结构体（复用上面定义的 OrderRequest）
+	var req OrderRequest
+	if err := xml.Unmarshal(data, &req); err != nil {
+		c.XML(400, gin.H{"message": err.Error()})
+		return
+	}
+
+	c.XML(200, req)
 })
 ```
 
