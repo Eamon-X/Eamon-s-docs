@@ -1,7 +1,7 @@
 {
   "devDependencies": {
     "@types/node": "^25.6.0",
-    "vitepress": "2.0.0-alpha.15"
+    "vitepress": "2.0.0-alpha.20"
   },
   "scripts": {
     "docs:dev": "vitepress dev src",
