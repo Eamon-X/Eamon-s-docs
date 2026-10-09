@@ -49,17 +49,28 @@ go get -u github.com/gin-gonic/gin
 package main
 
 import (
+	"net/http"
 	"github.com/gin-gonic/gin"
 )
 
 func main() {
+	// 创建一个默认的路由引擎
+	// gin.Default() 会自动加载 Logger 和 Recovery 中间件
 	r := gin.Default()
+	// 注册一个 GET 请求路由
+	// 当访问 /ping 时，返回 JSON 响应
 	r.GET("/ping", func(c *gin.Context) {
-		c.JSON(200, gin.H{
+		c.JSON(http.StatusOK, gin.H{
 			"message": "pong",
 		})
 	})
-	r.Run() // 默认监听 0.0.0.0:8080
+	// 注册一个 GET 请求路由
+	r.GET("/hello", func(c *gin.Context) {
+		// c.String 返回纯文本响应
+		c.String(http.StatusOK, "Hello, Gin!")
+	})
+	// 启动HTTP服务，监听 8080 端口
+	r.Run(":8080")  // 等价于 r.Run("127.0.0.1:8080")
 }
 ```
 
@@ -74,45 +85,6 @@ go run main.go
 ```json
 {"message": "pong"}
 ```
-
-## 第一个 Gin 程序
-
-创建一个完整的 Hello World 示例：
-
-```go
-package main
-
-import (
-	"net/http"
-
-	"github.com/gin-gonic/gin"
-)
-
-func main() {
-	// 创建一个默认的路由引擎
-	// gin.Default() 会自动加载 Logger 和 Recovery 中间件
-	r := gin.Default()
-
-	// 注册一个 GET 请求路由
-	r.GET("/hello", func(c *gin.Context) {
-		// c.String 返回纯文本响应
-		c.String(http.StatusOK, "Hello, Gin!")
-	})
-
-	// 启动服务，监听 8080 端口
-	r.Run(":8080")
-}
-```
-
-### 代码说明
-
-| 代码 | 说明 |
-|------|------|
-| `gin.Default()` | 创建默认引擎，自带 Logger 和 Recovery 中间件 |
-| `r.GET("/hello", handler)` | 注册 GET 路由和对应处理函数 |
-| `c *gin.Context` | 上下文对象，封装了请求和响应 |
-| `c.String(code, str)` | 返回字符串响应 |
-| `r.Run(":8080")` | 启动 HTTP 服务 |
 
 ### 启动方式对比
 
@@ -155,6 +127,75 @@ func main() {
 | DebugMode | 默认 | 输出调试日志，显示路由表 |
 | ReleaseMode | `gin.SetMode(gin.ReleaseMode)` | 减少日志，生产环境推荐 |
 | TestMode | `gin.SetMode(gin.TestMode)` | 测试环境使用 |
+
+## 热加载
+
+Go 没有内置热加载，开发时通常借助第三方文件监听工具，改完代码自动重新编译并重启服务，无需手动 `Ctrl+C` 再 `go run`。社区主流工具对比如下：
+
+| 工具 | 推荐度 | 特点 | 状态 |
+|------|--------|------|------|
+| **air** | ⭐⭐⭐⭐⭐ | 配置灵活、彩色日志、社区最活跃 | 活跃维护 |
+| **gin**（同名 CLI 工具） | ⭐⭐⭐⭐ | 零配置开箱即用，但名字易与框架混淆 | 维护较慢 |
+| **fresh** | ⭐⭐⭐ | 极简，基本无需配置 | 维护一般 |
+| **CompileDaemon** | ⭐⭐⭐ | 简单，适合小项目 | 维护一般 |
+| **realize** | ❌ | 功能曾最全，但已归档停止维护 | 不推荐 |
+
+**推荐使用 [air](https://github.com/air-verse/air)**。
+
+### 安装 air
+
+```shell
+go install github.com/air-verse/air@latest
+```
+
+### 初始化配置
+
+在项目根目录执行，自动生成 `.air.toml` 配置文件：
+
+```shell
+air init
+```
+
+生成的配置关键项如下（已适配 Gin 项目）：
+
+```toml
+root = "."
+tmp_dir = "tmp"
+
+[build]
+  # 构建命令：编译到 tmp 目录，不污染项目根目录
+  cmd = "go build -o ./tmp/main ."
+  bin = "tmp/main"
+  # 监听的文件扩展名
+  include_ext = ["go", "tpl", "tmpl", "html"]
+  # 忽略的目录（避免监听无关文件导致频繁重启）
+  exclude_dir = ["assets", "tmp", "vendor", "testdata"]
+  # 延迟时间（毫秒），防止连续保存触发多次重启
+  delay = 1000
+
+[misc]
+  # 退出时清理 tmp 目录
+  clean_on_exit = true
+```
+
+### 启动热加载
+
+```shell
+air
+```
+
+之后修改任意 `.go` 文件保存，air 会自动重新编译并重启服务，终端会输出类似日志：
+
+```
+building...
+running...
+[GIN-debug] Listening and serving HTTP on :8080
+```
+
+> **提示**：
+> - 热加载只用于**开发环境**，生产环境直接运行编译好的二进制即可，不要把 air 打进部署产物。
+> - 构建失败时 air 会打印错误并保留旧进程运行，不会中断调试。
+> - 如果用 VS Code 调试，可配合 Delve（`dlv`）在 air 重启后附加断点调试。
 
 ## 常用辅助方法
 
