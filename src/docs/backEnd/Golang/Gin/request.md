@@ -435,3 +435,49 @@ func main() {
 	r.Run(":8080")
 }
 ```
+
+### 发送请求测试
+
+启动服务后，可以用 curl 发送请求验证参数绑定效果。
+
+**创建用户**（JSON 请求体，走 `ShouldBindJSON`）：
+
+```bash
+curl -X POST http://localhost:8080/api/users \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Alice","email":"alice@example.com","age":25,"active":true}'
+```
+
+返回：
+
+```json
+{"code":200,"data":{"id":0,"name":"Alice","email":"alice@example.com","age":25,"active":true}}
+```
+
+**查询用户**（路径参数 + Query 参数，GET 请求也可以直接在浏览器地址栏访问）：
+
+```bash
+curl "http://localhost:8080/api/users/123?page=1"
+```
+
+返回：
+
+```json
+{"code":200,"data":{"id":"123","page":"1"}}
+```
+
+**校验失败示例**（缺少必填字段 `email`，`binding:"required"` 触发 400）：
+
+```bash
+curl -X POST http://localhost:8080/api/users \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Alice"}'
+```
+
+返回：
+
+```json
+{"code":400,"message":"参数错误: Key: 'User.Email' Error:Field validation for 'Email' failed on the 'required' tag"}
+```
+
+> **提示**：Windows 的 cmd 不支持用单引号包裹 JSON，建议改用 Git Bash、PowerShell，或使用 Apifox、Postman 等图形化工具发送请求。

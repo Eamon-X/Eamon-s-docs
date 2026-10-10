@@ -190,6 +190,135 @@ api := r.Group("/api")
 }
 ```
 
+### 拆分到多个文件
+
+项目规模上来后，全部路由写在一个文件里会越来越臃肿。推荐按**业务域**拆分，每个文件导出一个接收 `*gin.RouterGroup` 的注册函数，再由总入口统一调用。
+
+推荐的目录结构：
+
+```
+project/
+├── main.go
+└── routes/
+    ├── routes.go          # 总入口，统一调用各业务模块
+    ├── user_routes.go     # 用户相关路由
+    └── order_routes.go    # 订单相关路由
+```
+
+`routes/user_routes.go`：
+
+```go
+package routes
+
+import (
+	"net/http"
+
+	"github.com/gin-gonic/gin"
+)
+
+// RegisterUserRoutes 注册 /api/v1/users 下的所有路由
+func RegisterUserRoutes(group *gin.RouterGroup) {
+	users := group.Group("/users")
+	{
+		users.GET("", listUsers)
+		users.GET("/:id", getUser)
+		users.POST("", createUser)
+		users.PUT("/:id", updateUser)
+		users.DELETE("/:id", deleteUser)
+	}
+}
+
+func listUsers(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{"message": "用户列表"})
+}
+func getUser(c *gin.Context) {
+	id := c.Param("id")
+	c.JSON(http.StatusOK, gin.H{"id": id})
+}
+func createUser(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{"message": "创建用户"})
+}
+func updateUser(c *gin.Context) {
+	id := c.Param("id")
+	c.JSON(http.StatusOK, gin.H{"id": id})
+}
+func deleteUser(c *gin.Context) {
+	id := c.Param("id")
+	c.JSON(http.StatusOK, gin.H{"id": id})
+}
+```
+
+`routes/order_routes.go`：
+
+```go
+package routes
+
+import (
+	"net/http"
+
+	"github.com/gin-gonic/gin"
+)
+
+func RegisterOrderRoutes(group *gin.RouterGroup) {
+	orders := group.Group("/orders")
+	{
+		orders.GET("", listOrders)
+		orders.GET("/:id", getOrder)
+	}
+}
+
+func listOrders(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{"message": "订单列表"})
+}
+func getOrder(c *gin.Context) {
+	id := c.Param("id")
+	c.JSON(http.StatusOK, gin.H{"id": id})
+}
+```
+
+`routes/routes.go`（总入口）：
+
+```go
+package routes
+
+import (
+	"github.com/gin-gonic/gin"
+)
+
+// RegisterAllRoutes 挂载所有业务路由到根路由
+func RegisterAllRoutes(r *gin.Engine) {
+	api := r.Group("/api")
+	v1 := api.Group("/v1")
+
+	// 统一调用各业务模块的注册函数
+	RegisterUserRoutes(v1)
+	RegisterOrderRoutes(v1)
+}
+```
+
+`main.go`：
+
+```go
+package main
+
+import (
+	"github.com/gin-gonic/gin"
+
+	"your-project/routes"
+)
+
+func main() {
+	r := gin.Default()
+
+	// 一行代码完成所有路由注册
+	routes.RegisterAllRoutes(r)
+
+	r.Run(":8080")
+}
+```
+
+> **提示**：每个 `RegisterXxxRoutes` 只负责**路由挂载**，handler 里的业务逻辑建议抽到 `service` 或 `controller` 层，路由文件保持"薄"。如果需要在路由里统一挂载 middleware（如鉴权、限流），可以在 `RegisterAllRoutes` 里给 `v1` 分组加，也可以在各业务文件内部用 `users := group.Group("", AuthMiddleware())` 单独加。
+
 ## 路由匹配优先级
 
 Gin 基于 httprouter，路由匹配遵循以下优先级：
