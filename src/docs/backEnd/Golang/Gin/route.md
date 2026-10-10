@@ -317,7 +317,7 @@ func main() {
 }
 ```
 
-> **提示**：每个 `RegisterXxxRoutes` 只负责**路由挂载**，handler 里的业务逻辑建议抽到 `service` 或 `controller` 层，路由文件保持"薄"。如果需要在路由里统一挂载 middleware（如鉴权、限流），可以在 `RegisterAllRoutes` 里给 `v1` 分组加，也可以在各业务文件内部用 `users := group.Group("", AuthMiddleware())` 单独加。
+> **提示**：每个 `RegisterXxxRoutes` 只负责**路由挂载**，handler 里的业务逻辑建议抽到 `service` 或 `controller` 层（详见[控制器](controller.md)），路由文件保持"薄"。如果需要在路由里统一挂载 middleware（如鉴权、限流），可以在 `RegisterAllRoutes` 里给 `v1` 分组加，也可以在各业务文件内部用 `users := group.Group("", AuthMiddleware())` 单独加。
 
 ## 路由匹配优先级
 
