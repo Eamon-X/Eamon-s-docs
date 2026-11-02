@@ -60,6 +60,12 @@ curl -X POST http://localhost:8080/upload \
 
 ## 多文件上传
 
+多文件上传分两种情况：多个文件共用**同一个字段名**，或每个文件有**独立的字段名**，两种情况的取值方式不同。
+
+### 相同字段名的多文件上传
+
+表单里多个 input 共用一个 `name`（或 curl 里多次 `-F "files=@..."`），通过 `form.File["字段名"]` 拿到文件切片：
+
 ```go
 r.POST("/upload-multiple", func(c *gin.Context) {
 	// 获取表单中的所有文件
@@ -75,7 +81,7 @@ r.POST("/upload-multiple", func(c *gin.Context) {
 	// 逐个保存
 	var savedFiles []string
 	for _, file := range files {
-		uploadPath := "uploads/" + file.Filename
+		uploadPath := "uploads/" + filepath.Base(file.Filename)
 		if err := c.SaveUploadedFile(file, uploadPath); err != nil {
 			c.JSON(500, gin.H{"message": "文件 " + file.Filename + " 保存失败"})
 			return
@@ -90,7 +96,7 @@ r.POST("/upload-multiple", func(c *gin.Context) {
 })
 ```
 
-### 前端多文件表单
+#### 前端表单与 curl 测试
 
 ```html
 <form action="/upload-multiple" method="post" enctype="multipart/form-data">
@@ -100,12 +106,118 @@ r.POST("/upload-multiple", func(c *gin.Context) {
 ```
 
 ```shell
-# curl 测试多文件上传
+# 同一个字段名重复出现
 curl -X POST http://localhost:8080/upload-multiple \
   -F "files=@./a.txt" \
   -F "files=@./b.txt" \
   -F "files=@./c.txt"
 ```
+
+### 不同字段名的多文件上传
+
+每个文件有自己独立的字段名，比如头像、附件分开上传，各自独立校验。
+
+#### 方式一：字段名固定，逐个 FormFile
+
+字段名事先确定时，直接对每个字段调用 `c.FormFile`：
+
+```go
+r.POST("/upload-profile", func(c *gin.Context) {
+	avatar, err := c.FormFile("avatar")
+	if err != nil {
+		c.JSON(400, gin.H{"message": "请选择头像"})
+		return
+	}
+
+	attachment, err := c.FormFile("attachment")
+	if err != nil {
+		c.JSON(400, gin.H{"message": "请选择附件"})
+		return
+	}
+
+	avatarPath := "uploads/avatar_" + filepath.Base(avatar.Filename)
+	attachPath := "uploads/attach_" + filepath.Base(attachment.Filename)
+
+	if err := c.SaveUploadedFile(avatar, avatarPath); err != nil {
+		c.JSON(500, gin.H{"message": "头像保存失败"})
+		return
+	}
+	if err := c.SaveUploadedFile(attachment, attachPath); err != nil {
+		c.JSON(500, gin.H{"message": "附件保存失败"})
+		return
+	}
+
+	c.JSON(200, gin.H{
+		"avatar":     avatarPath,
+		"attachment": attachPath,
+	})
+})
+```
+
+这种方式的好处是**每个字段可以独立校验**（类型、大小各自限制）。
+
+#### 方式二：字段名不固定，遍历 form.File
+
+`form.File` 的类型是 `map[string][]*multipart.FileHeader`，key 是字段名。字段名动态不固定时，直接遍历整个 map：
+
+```go
+r.POST("/upload-mixed", func(c *gin.Context) {
+	form, err := c.MultipartForm()
+	if err != nil {
+		c.JSON(400, gin.H{"message": "表单解析失败"})
+		return
+	}
+
+	var saved []string
+	// fieldName 是字段名，files 是该字段名下的所有文件
+	for fieldName, files := range form.File {
+		for _, file := range files {
+			uploadPath := "uploads/" + fieldName + "_" + filepath.Base(file.Filename)
+			if err := c.SaveUploadedFile(file, uploadPath); err != nil {
+				c.JSON(500, gin.H{"message": "文件保存失败"})
+				return
+			}
+			saved = append(saved, uploadPath)
+		}
+	}
+
+	c.JSON(200, gin.H{
+		"message": fmt.Sprintf("成功上传 %d 个文件", len(saved)),
+		"files":   saved,
+	})
+})
+```
+
+#### 前端表单与 curl 测试
+
+```html
+<!-- 每个文件独立的 name -->
+<form action="/upload-profile" method="post" enctype="multipart/form-data">
+    <input type="file" name="avatar">
+    <input type="file" name="attachment">
+    <input type="submit" value="上传">
+</form>
+```
+
+```shell
+# 字段名固定的接口
+curl -X POST http://localhost:8080/upload-profile \
+  -F "avatar=@./avatar.png" \
+  -F "attachment=@./doc.pdf"
+
+# 字段名不固定的接口，字段名随意
+curl -X POST http://localhost:8080/upload-mixed \
+  -F "image=@./a.png" \
+  -F "video=@./b.mp4"
+```
+
+### 两种上传方式对比
+
+| 场景 | 获取方式 | 适用情况 |
+|------|----------|----------|
+| 同名多文件 | `form.File["files"]` 取切片 | 前端多选框批量上传，文件地位平等 |
+| 异名字段固定 | 逐个 `c.FormFile("xxx")` | 语义不同的文件，需各自校验（头像/附件） |
+| 异名字段不固定 | 遍历 `form.File` | 动态表单，字段名由前端决定 |
 
 ## 文件类型限制
 

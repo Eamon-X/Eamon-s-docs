@@ -451,7 +451,7 @@ r.Use(A(), B(), C())
 1. **中间件顺序很重要**：先注册的先执行
 2. **Abort 后仍需返回响应**：`Abort()` 不会自动返回响应，需要显式调用
 3. **不要在中间件中阻塞太久**：会影响整个服务的响应能力
-4. **使用 goroutine 时要复制上下文**：不要在 goroutine 中使用 `*gin.Context`
+4. **使用 goroutine 时要复制上下文**：不要在 goroutine 中使用 `*gin.Context`，需要异步处理时用 `c.Copy()`（详见下节）
 
 ```go
 func BadMiddleware() gin.HandlerFunc {
@@ -472,3 +472,47 @@ func BadMiddleware() gin.HandlerFunc {
 	}
 }
 ```
+
+## 上下文复制（c.Copy）
+
+`*gin.Context` 是由 `sync.Pool` 复用的，handler 返回后它会被回收并分配给其他请求。因此**不能在 goroutine 中直接使用原 `c`**，否则会出现数据竞争或读到其他请求的数据。
+
+`c.Copy()` 会返回一个可安全跨 goroutine 使用的副本：
+
+```go
+func AsyncLogMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// 必须在 handler 内同步复制，再传给 goroutine
+		cCopy := c.Copy()
+
+		go func() {
+			// 安全：读取请求信息和上下文值
+			time.Sleep(100 * time.Millisecond)
+			log.Printf("method=%s path=%s user=%v",
+				cCopy.Request.Method,
+				cCopy.Request.URL.Path,
+				cCopy.MustGet("userID"),
+			)
+		}()
+
+		c.Next()
+	}
+}
+```
+
+副本包含的内容：
+
+| 字段 | 说明 |
+|------|------|
+| `Request` | 指向原请求，可读取方法和 URL 等信息 |
+| `Keys` | `c.Set()` 存入的值会被浅拷贝一份 |
+| `Params` | 路径参数会被完整拷贝 |
+
+使用限制与注意点：
+
+1. **副本是只读的，不能用来写响应**。`Copy()` 内部把 `ResponseWriter` 置空了，在副本上调用 `cCopy.JSON()` 等方法会 panic（空指针）。
+2. **`Keys` 是浅拷贝**。如果存的是指针、slice、map，副本和原上下文仍共享同一份底层数据，goroutine 中修改它们依然有并发风险，需要自行加锁或深拷贝。
+3. **必须在 handler 内同步调用 `c.Copy()`**。放到 goroutine 里再调用已经晚了，原 `c` 可能已被回收。
+4. **副本上不能再执行中间件链**。`Copy()` 会把内部索引置为终止值，`cCopy.Next()` 不会继续走后续 handler。
+
+> **提示**：如果异步任务只需要少量简单值（如 header、某个 ID），像上一节那样把值取出来以参数形式传入 goroutine 更轻量；需要整体访问请求信息时才用 `c.Copy()`。

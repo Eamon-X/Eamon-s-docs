@@ -75,7 +75,9 @@ r.GET("/cookie", func(c *gin.Context) {
 
 r.GET("/set-cookie", func(c *gin.Context) {
 	// 设置 Cookie
-	c.SetCookie("username", "admin",
+	c.SetCookie(
+		"username",  // Cookie 名称
+		"admin",     // Cookie 值
 		3600,        // 有效期（秒）
 		"/",         // 路径
 		"localhost", // 域名
@@ -84,7 +86,139 @@ r.GET("/set-cookie", func(c *gin.Context) {
 	)
 	c.String(200, "Cookie 已设置")
 })
+
+r.GET("/delete-cookie", func(c *gin.Context) {
+	// 删除 Cookie：将有效期设为负数，浏览器会立即移除
+	c.SetCookie(
+		"username",  // 要删除的 Cookie 名称
+		"",          // 值置空
+		-1,          // 有效期设为负数
+		"/",         // 路径必须与设置时一致
+		"localhost", // 域名必须与设置时一致
+		false,       // 是否仅 HTTPS
+		true,        // 是否 HttpOnly
+	)
+	c.String(200, "Cookie 已删除")
+})
 ```
+
+> **注意**：删除 Cookie 的本质是让浏览器立即过期该 Cookie。`Path` 和 `Domain` 必须与设置时完全一致，否则删除的是另一个 Cookie；因此实际项目中通常将设置/删除 Cookie 封装成公共函数，保证参数一致。
+
+#### 二级域名共享 Cookie
+
+默认情况下 Cookie 只属于设置它的那个域名。要让 `api.example.com`、`www.example.com`、`admin.example.com` 等子域名共享同一份 Cookie，需要把 `Domain` 设置为它们的公共父域名：
+
+```go
+r.GET("/set-shared-cookie", func(c *gin.Context) {
+	c.SetCookie(
+		"token",       // Cookie 名称
+		"abc123",      // Cookie 值
+		3600,          // 有效期（秒）
+		"/",           // 路径必须为 /，否则只对特定路径生效
+		"example.com", // 公共父域名，所有子域名均可读取
+		false,         // 是否仅 HTTPS
+		true,          // 是否 HttpOnly
+	)
+	c.String(200, "共享 Cookie 已设置")
+})
+```
+
+说明：
+
+- `Domain` 写 `example.com` 或 `.example.com` 效果相同，现代浏览器都会将其作用于所有子域名；老规范推荐带前导点 `.` 的写法
+- `Domain` 只能设置为当前请求域名本身或其父域名，设置无关域名（如在本站给 `baidu.com` 设置 Cookie）会被浏览器忽略
+- 删除共享 Cookie 时同样要使用相同的父域名，否则删不掉
+- 子域名之间属于同一个站点（same-site），不受 `SameSite` 策略限制；但如果是完全不同的两个域名之间共享登录态，Cookie 无法实现，需要考虑 OAuth / 中央认证（SSO）等方案
+
+### Session
+
+Gin 本身没有内置 Session 支持，官方推荐使用 `gin-contrib/sessions` 中间件。Session 数据保存在服务端（或加密后存入 Cookie），浏览器只保留一个 Session ID，比直接把敏感数据放在 Cookie 里更安全。
+
+安装依赖：
+
+```bash
+go get github.com/gin-contrib/sessions
+```
+
+完整示例（基于 Cookie 存储）：
+
+```go
+package main
+
+import (
+	"github.com/gin-contrib/sessions"
+	"github.com/gin-contrib/sessions/cookie"
+	"github.com/gin-gonic/gin"
+)
+
+func main() {
+	r := gin.Default()
+
+	// 创建基于 Cookie 的存储，参数为签名密钥（建议 32 字节以上）
+	store := cookie.NewStore([]byte("0123456789abcdef0123456789abcdef"))
+
+	// 注册 Session 全局中间件，"mysession" 是浏览器中的 Cookie 名称，它就是 浏览器中那个 Cookie 的名字 。基于 Cookie 的存储会把会话数据（加密签名后）直接放进这个同名 Cookie 里
+	r.Use(sessions.Sessions("mysession", store))
+
+	r.GET("/login", func(c *gin.Context) {
+		session := sessions.Default(c)
+		// 写入 Session 数据
+		session.Set("username", "admin")
+		session.Set("role", "admin")
+		// 必须调用 Save，否则修改不会生效
+		session.Save()
+		c.String(200, "登录成功")
+	})
+
+	r.GET("/profile", func(c *gin.Context) {
+		session := sessions.Default(c)
+		// 读取 Session 数据，不存在时返回 nil
+		username := session.Get("username")
+		if username == nil {
+			c.String(401, "未登录")
+			return
+		}
+		c.String(200, "当前用户: %v", username)
+	})
+
+	r.GET("/logout", func(c *gin.Context) {
+		session := sessions.Default(c)
+		// 清空 Session 并让 Cookie 立即过期
+		session.Clear()
+		session.Options(sessions.Options{Path: "/", MaxAge: -1})
+		session.Save()
+		c.String(200, "已退出登录")
+	})
+
+	r.Run(":8080")
+}
+```
+
+常用方法：
+
+| 方法                     | 说明                           |
+| ------------------------ | ------------------------------ |
+| `session.Set(key, val)`  | 写入键值对                     |
+| `session.Get(key)`       | 读取，不存在返回 `nil`         |
+| `session.Delete(key)`    | 删除指定键                     |
+| `session.Clear()`        | 清空所有数据                   |
+| `session.Options(...)`   | 修改 Cookie 属性（有效期等）   |
+| `session.Save()`         | 保存修改，**每次修改后必须调用** |
+
+说明：
+
+- 除了 Cookie 存储，还支持 Redis、Memcached、Memstore、MongoDB 等后端，多实例部署时推荐 Redis，保证各节点共享会话：
+
+```go
+import "github.com/gin-contrib/sessions/redis"
+
+// 参数：连接池大小、协议、地址、密码、密钥
+store, _ := redis.NewStore(10, "tcp", "localhost:6379", "", []byte("secret"))
+r.Use(sessions.Sessions("mysession", store))
+```
+
+- Cookie 存储是把数据加密后放在浏览器端，适合存放少量非敏感数据，不要存储大对象
+- 修改 Session 后忘记调用 `Save()` 是最常见的错误，表现为"写了但不生效"
 
 ## 参数绑定
 
@@ -121,15 +255,15 @@ r.POST("/login", func(c *gin.Context) {
 
 ### 绑定方法对比
 
-| 方法 | 适用场景 | 说明 |
-|------|----------|------|
-| `ShouldBind` | 通用 | 根据 Content-Type 自动选择绑定方式 |
-| `ShouldBindJSON` | JSON | 绑定 JSON 请求体 |
-| `ShouldBindXML` | XML | 绑定 XML 请求体 |
-| `ShouldBindQuery` | Query | 绑定 URL 查询参数 |
-| `ShouldBindForm` | 表单 | 绑定表单数据 |
-| `ShouldBindUri` | 路径参数 | 绑定 URI 中的路径参数 |
-| `ShouldBindHeader` | 请求头 | 绑定请求头 |
+| 方法               | 适用场景 | 说明                               |
+| ------------------ | -------- | ---------------------------------- |
+| `ShouldBind`       | 通用     | 根据 Content-Type 自动选择绑定方式 |
+| `ShouldBindJSON`   | JSON     | 绑定 JSON 请求体                   |
+| `ShouldBindXML`    | XML      | 绑定 XML 请求体                    |
+| `ShouldBindQuery`  | Query    | 绑定 URL 查询参数                  |
+| `ShouldBindForm`   | 表单     | 绑定表单数据                       |
+| `ShouldBindUri`    | 路径参数 | 绑定 URI 中的路径参数              |
+| `ShouldBindHeader` | 请求头   | 绑定请求头                         |
 
 ### JSON 绑定
 
@@ -313,14 +447,14 @@ r.POST("/posts/:id", func(c *gin.Context) {
 
 ### 常用标签
 
-| 标签 | 来源 | 说明 |
-|------|------|------|
-| `form` | 表单/Query | 表单字段名 |
-| `json` | JSON | JSON 字段名 |
-| `uri` | 路径 | 路径参数名 |
-| `header` | 请求头 | 请求头字段名 |
-| `binding` | 校验规则 | 校验规则（详见校验章节） |
-| `default` | - | 默认值（需配合 gin 的 binding 配置） |
+| 标签      | 来源       | 说明                                 |
+| --------- | ---------- | ------------------------------------ |
+| `form`    | 表单/Query | 表单字段名                           |
+| `json`    | JSON       | JSON 字段名                          |
+| `uri`     | 路径       | 路径参数名                           |
+| `header`  | 请求头     | 请求头字段名                         |
+| `binding` | 校验规则   | 校验规则（详见校验章节）             |
+| `default` | -          | 默认值（需配合 gin 的 binding 配置） |
 
 ### 时间格式绑定
 
@@ -451,7 +585,16 @@ curl -X POST http://localhost:8080/api/users \
 返回：
 
 ```json
-{"code":200,"data":{"id":0,"name":"Alice","email":"alice@example.com","age":25,"active":true}}
+{
+  "code": 200,
+  "data": {
+    "id": 0,
+    "name": "Alice",
+    "email": "alice@example.com",
+    "age": 25,
+    "active": true
+  }
+}
 ```
 
 **查询用户**（路径参数 + Query 参数，GET 请求也可以直接在浏览器地址栏访问）：
@@ -463,7 +606,7 @@ curl "http://localhost:8080/api/users/123?page=1"
 返回：
 
 ```json
-{"code":200,"data":{"id":"123","page":"1"}}
+{ "code": 200, "data": { "id": "123", "page": "1" } }
 ```
 
 **校验失败示例**（缺少必填字段 `email`，`binding:"required"` 触发 400）：
@@ -477,7 +620,10 @@ curl -X POST http://localhost:8080/api/users \
 返回：
 
 ```json
-{"code":400,"message":"参数错误: Key: 'User.Email' Error:Field validation for 'Email' failed on the 'required' tag"}
+{
+  "code": 400,
+  "message": "参数错误: Key: 'User.Email' Error:Field validation for 'Email' failed on the 'required' tag"
+}
 ```
 
 > **提示**：Windows 的 cmd 不支持用单引号包裹 JSON，建议改用 Git Bash、PowerShell，或使用 Apifox、Postman 等图形化工具发送请求。
