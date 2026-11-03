@@ -17,6 +17,13 @@ export default defineConfig({
           { text: "Golang", link: "backEnd/Golang" },
         ],
       },
+      {
+        text: "数据库",
+        items: [
+          { text: "MongoDB", link: "database/MongoDB" },
+          { text: "MySQL", link: "database/MySQL" },
+        ],
+      },
       { text: "AI", items: [{ text: "龙虾研习室", link: "AI/ClawLab/index" }] },
     ],
 
@@ -34,6 +41,9 @@ export default defineConfig({
       "/backEnd/NodeJs": genSidebar("/backEnd/NodeJs"),
       "/backEnd/Golang": genSidebar("/backEnd/Golang"),
       "/AI/ClawLab/tutorial": genSidebar("/AI/ClawLab/tutorial"),
+      "/database/MongoDB": genSidebar("/database/MongoDB"),
+      "/database/MySQL": genSidebar("/database/MySQL"),
+      "/database": genSidebar("/database"),
     },
 
     outline: {
