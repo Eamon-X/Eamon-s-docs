@@ -1,6 +1,6 @@
 ---
 title: 在 Node.js 中使用
-order: 7
+order: 9
 ---
 
 # 在 Node.js 中使用 MySQL

@@ -48,6 +48,35 @@ mysql -h 127.0.0.1 -P 3306 -u root -p
 | DBeaver         | 图形化     | 免费开源，支持多种数据库         |
 | DataGrip        | 图形化     | 收费，JetBrains 出品，提示智能   |
 
+### 命令行竖排输出（\G）
+
+`\G` 是 **mysql 命令行客户端**的专用结束符，不是 SQL 语法。写在语句末尾代替分号，结果会按「字段名: 值」竖排打印，适合列很多或字段值很长的场景：
+
+```sql
+mysql> SHOW INDEX FROM user\G
+*************************** 1. row ***************************
+        Table: user
+   Non_unique: 0
+     Key_name: PRIMARY
+ Seq_in_index: 1
+  Column_name: id
+    Collation: A
+  Cardinality: 3
+     Index_type: BTREE
+```
+
+`\G` 结尾**不用加分号**，它本身就充当语句结束符。三种结尾符的差别：
+
+| 结束符 | 效果         | 说明                                   |
+| ------ | ------------ | -------------------------------------- |
+| `;`    | 水平表格输出 | 最常用                                 |
+| `\g`   | 水平表格输出 | 与 `;` 完全等价，只是写法显式          |
+| `\G`   | **竖排输出** | 每行一个字段，一条记录一块             |
+
+常见用途：`SHOW INDEX FROM 表\G`、`EXPLAIN SELECT ...\G`、`SELECT * FROM 表 WHERE id = 1\G`。
+
+> **限制**：`\G` 只在 mysql / mariadb 命令行客户端有效。在 Navicat、DBeaver、MySQL Workbench、Node.js 的 mysql2 等驱动、以及任何 `.sql` 脚本里写 `\G` 都会报语法错误，这些环境只能用分号。它只影响显示格式，不影响查询结果。
+
 ## 与 MongoDB 概念对照
 
 | MySQL  | MongoDB |

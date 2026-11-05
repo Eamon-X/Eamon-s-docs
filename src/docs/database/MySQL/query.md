@@ -141,14 +141,37 @@ SELECT DISTINCT age, name FROM user;
 
 ## 联表查询（JOIN）
 
-以下示例基于 `user` 表和 `orders` 表（`orders.user_id` 关联 `user.id`）。
+以下示例基于 `user` 表和 `orders` 表（`orders.user_id` 关联 `user.id`），多表关系见「表的关系」章节。
+
+### 从笛卡尔积说起
+
+两张表不加任何条件地组合，就是**笛卡尔积**——左表每一行 × 右表每一行，结果行数 = m × n：
+
+```sql
+-- user 有 3 行、orders 有 4 行 → 结果 12 行，几乎没有业务意义
+SELECT * FROM user, orders;            -- 老式写法（隐式连接）
+SELECT * FROM user CROSS JOIN orders;  -- 显式写法
+```
+
+JOIN 的本质就是：**先做笛卡尔积，再用 `ON` 条件过滤出有意义的组合**。忘写 `ON` 不会报错，但会返回整个笛卡尔积——数据量大时直接拖垮数据库，是新手常见事故。
+
+### 内连接（INNER JOIN）
+
+只保留两表都匹配的行（笛卡尔积 + `ON` 过滤）：
 
 ```sql
 -- 内连接：只返回两表都匹配上的记录
 SELECT o.id, u.name, o.amount
 FROM orders o
 INNER JOIN user u ON o.user_id = u.id;
+-- INNER 可省略，只写 JOIN 默认就是内连接
+```
 
+### 外连接（LEFT / RIGHT JOIN）
+
+内连接会"丢数据"——没下过订单的用户不会出现在结果里。想保留某一侧的全部行就用外连接，匹配不上的那一侧补 NULL：
+
+```sql
 -- 左连接：左表全部保留，右表匹配不上的补 NULL
 SELECT u.name, o.amount
 FROM user u
@@ -166,12 +189,47 @@ RIGHT JOIN orders o ON o.user_id = u.id;
 | LEFT JOIN   | 左表全部 + 右表匹配部分        |
 | RIGHT JOIN  | 右表全部 + 左表匹配部分        |
 
+### 全外连接（MySQL 不支持）
+
+标准 SQL 的 `FULL OUTER JOIN` 保留两表全部行，MySQL 没有实现，用 `UNION` 拼接左连接和右连接来模拟：
+
 ```sql
--- 经典场景：查询没有订单的用户（左连接 + 判空）
+SELECT u.name, o.amount FROM user u    LEFT  JOIN orders o ON o.user_id = u.id
+UNION
+SELECT u.name, o.amount FROM orders o  RIGHT JOIN user u ON o.user_id = u.id;
+```
+
+> `UNION` 默认去重，两段查询里重复的匹配行只保留一份，结果正好等于 FULL OUTER JOIN。注意第二段把 `user` 放在 RIGHT JOIN 的右侧，这样"只有订单、没有用户"的数据也能被保留。
+
+### 自连接
+
+同一张表和自己 JOIN，用两个别名当作"两张表"。典型场景是表内存上下级关系：
+
+```sql
+-- employee 表：id, name, manager_id（manager_id 指向同表另一行的 id）
+-- 查询每个员工及其直属上级（没有上级的员工也要出现，用左连接）
+SELECT e.name AS 员工, m.name AS 上级
+FROM employee e
+LEFT JOIN employee m ON m.id = e.manager_id;
+```
+
+### 经典场景：查"没有"数据的行
+
+```sql
+-- 查询没有订单的用户（左连接 + 判空）
 SELECT u.name
 FROM user u
 LEFT JOIN orders o ON o.user_id = u.id
 WHERE o.id IS NULL;
+```
+
+> **ON 与 WHERE 的区别**：LEFT JOIN 时，右表的过滤条件应写在 `ON` 里而不是 `WHERE` 里。写在 `WHERE` 里会把 NULL 行过滤掉，外连接退化成内连接：
+
+```sql
+-- 条件放 ON：所有用户都保留，只是没匹配上大额订单的用户订单列为 NULL
+SELECT u.name, o.amount
+FROM user u
+LEFT JOIN orders o ON o.user_id = u.id AND o.amount > 100;
 ```
 
 ## 子查询
@@ -188,6 +246,80 @@ SELECT * FROM user u WHERE EXISTS (
   SELECT 1 FROM orders o WHERE o.user_id = u.id
 );
 ```
+
+### IN 的进阶用法
+
+**NOT IN 与 NULL 陷阱**：
+
+```sql
+-- 没有订单的用户
+SELECT * FROM user
+WHERE id NOT IN (SELECT user_id FROM orders WHERE user_id IS NOT NULL);
+```
+
+> **注意**：如果子查询结果含 `NULL`，`NOT IN` 会匹配不到任何行（`x NOT IN (1, 2, NULL)` 的结果永远是 UNKNOWN）。所以 `NOT IN` 前要在子查询里过滤 NULL，或改用 `NOT EXISTS`。
+
+**行构造器：多列组合匹配**，`IN` 不只能匹配一列，还可以多列成对匹配：
+
+```sql
+-- 广东省深圳、浙江省杭州的用户
+SELECT * FROM user
+WHERE (province, city) IN (('广东', '深圳'), ('浙江', '杭州'));
+
+-- 等价于
+SELECT * FROM user
+WHERE (province = '广东' AND city = '深圳')
+   OR (province = '浙江' AND city = '杭州');
+
+-- 经典场景：查询"每个用户金额最大的订单"
+SELECT * FROM orders o
+WHERE (o.user_id, o.amount) IN (
+  SELECT o2.user_id, MAX(o2.amount)
+  FROM orders o2
+  GROUP BY o2.user_id
+);
+```
+
+**关联子查询**，子查询里引用外层的列，外层每一行都会执行一次子查询：
+
+```sql
+-- 下过金额超过 100 的订单的用户
+SELECT * FROM user u
+WHERE u.id IN (
+  SELECT o.user_id FROM orders o
+  WHERE o.amount > 100
+    AND o.user_id = u.id   -- 引用了外层的 u.id
+);
+```
+
+**搭配 ANY / ALL**，`IN` 是「等于其中任意一个」，`ANY`/`ALL` 则把比较运算符也带进去：
+
+```sql
+-- 金额大于"任意一个北京用户订单金额"（即大于最小值）
+SELECT * FROM orders
+WHERE amount > ANY (
+  SELECT o.amount FROM orders o
+  JOIN user u ON o.user_id = u.id
+  WHERE u.city = '北京'
+);
+
+-- 金额大于"所有北京用户订单金额"（即大于最大值）
+SELECT * FROM orders
+WHERE amount > ALL (
+  SELECT o.amount FROM orders o
+  JOIN user u ON o.user_id = u.id
+  WHERE u.city = '北京'
+);
+```
+
+### 子查询使用建议
+
+| 场景                         | 建议                          |
+| ---------------------------- | ----------------------------- |
+| 子查询结果很小、外表大       | `IN` 合适                     |
+| 子查询要引用外表（关联子查询） | 优先 `EXISTS`，语义更清晰   |
+| `NOT IN`                     | 必须防 NULL，或改 `NOT EXISTS` |
+| 子查询返回大量数据           | 改写成 `JOIN`，性能通常更好   |
 
 ## 执行顺序
 
