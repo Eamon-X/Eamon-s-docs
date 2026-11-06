@@ -79,6 +79,12 @@ go fmt main.go
 
 善用调试：在代码行号左侧点击可以设置断点，然后使用VS Code左侧的“运行和调试”功能启动，可以逐行检查程序状态，这是解决复杂问题的利器。
 
+## 数据库操作
+
+Go 语言连接 MySQL 最常用的是 GORM（Go 的 ORM 库），涵盖模型定义、增删改查、关联关系、事务与锁：
+
+[GORM 完整教程](/database/MySQL/GORM/)
+
 ## 参考文献
 
 - [Golang 官方文档中文](https://go-lang.org.cn/)
